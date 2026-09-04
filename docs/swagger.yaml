@@ -1,0 +1,2740 @@
+basePath: /api/v1
+definitions:
+  activities.BulkActivityEntry:
+    properties:
+      activity_item_id:
+        type: string
+      description:
+        type: string
+      occurred_at:
+        type: string
+      point_value:
+        minimum: 0
+        type: integer
+      user_id:
+        type: string
+    required:
+    - activity_item_id
+    - occurred_at
+    - user_id
+    type: object
+  activities.BulkCreateDTO:
+    properties:
+      activities:
+        items:
+          $ref: '#/definitions/activities.BulkActivityEntry'
+        maxItems: 10000
+        minItems: 1
+        type: array
+      learning_group_id:
+        type: string
+      platform:
+        maxLength: 50
+        type: string
+      recorded_user_id:
+        type: string
+    required:
+    - activities
+    - platform
+    - recorded_user_id
+    type: object
+  activities.CreateDTO:
+    properties:
+      activity_item_id:
+        type: string
+      description:
+        type: string
+      learning_group_id:
+        type: string
+      occurred_at:
+        type: string
+      platform:
+        maxLength: 50
+        type: string
+      point_value:
+        minimum: 0
+        type: integer
+      recorded_user_id:
+        type: string
+      user_id:
+        type: string
+    required:
+    - activity_item_id
+    - occurred_at
+    - platform
+    - recorded_user_id
+    - user_id
+    type: object
+  activities.UpdateDTO:
+    properties:
+      activity_item_id:
+        type: string
+      description:
+        type: string
+      learning_group_id:
+        type: string
+      occurred_at:
+        type: string
+      platform:
+        maxLength: 50
+        type: string
+      point_value:
+        minimum: 0
+        type: integer
+      recorded_user_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  activitycategories.CreateDTO:
+    properties:
+      color:
+        maxLength: 20
+        type: string
+      description:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+    required:
+    - name
+    type: object
+  activitycategories.UpdateDTO:
+    properties:
+      color:
+        maxLength: 20
+        type: string
+      description:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+    type: object
+  activityitems.CreateDTO:
+    properties:
+      category_id:
+        type: string
+      color:
+        maxLength: 20
+        type: string
+      daily_limit:
+        minimum: 0
+        type: integer
+      description:
+        type: string
+      is_send_notif:
+        type: boolean
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      period_limit:
+        minimum: 0
+        type: integer
+      period_type:
+        enum:
+        - none
+        - weekly
+        - monthly
+        - lifetime
+        type: string
+      point_value:
+        minimum: 0
+        type: integer
+      type:
+        enum:
+        - positive
+        - violation
+        type: string
+    required:
+    - name
+    - type
+    type: object
+  activityitems.UpdateDTO:
+    properties:
+      category_id:
+        type: string
+      color:
+        maxLength: 20
+        type: string
+      daily_limit:
+        minimum: 0
+        type: integer
+      description:
+        type: string
+      is_send_notif:
+        type: boolean
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      period_limit:
+        minimum: 0
+        type: integer
+      period_type:
+        enum:
+        - none
+        - weekly
+        - monthly
+        - lifetime
+        type: string
+      point_value:
+        minimum: 0
+        type: integer
+      type:
+        enum:
+        - positive
+        - violation
+        type: string
+    type: object
+  attendance_absence_reasons.CreateDTO:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+    required:
+    - name
+    type: object
+  attendance_absence_reasons.UpdateDTO:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+    type: object
+  attendance_logs.CheckInDTO:
+    properties:
+      check_in_at:
+        type: string
+      learning_group_id:
+        type: string
+      location_lat:
+        type: number
+      location_long:
+        type: number
+      requires_check_out:
+        type: boolean
+      status:
+        enum:
+        - on_time
+        - late
+        type: string
+      type:
+        enum:
+        - student
+        - teacher
+        - learning_group
+        type: string
+      user_id:
+        type: string
+    required:
+    - status
+    - type
+    - user_id
+    type: object
+  attendance_logs.CheckOutDTO:
+    properties:
+      check_out_at:
+        type: string
+      location_lat:
+        type: number
+      location_long:
+        type: number
+    type: object
+  attendance_logs.CreateDTO:
+    properties:
+      absence_note:
+        type: string
+      absence_reason_id:
+        type: string
+      check_in_at:
+        type: string
+      check_in_lat:
+        type: number
+      check_in_long:
+        type: number
+      check_out_at:
+        type: string
+      check_out_lat:
+        type: number
+      check_out_long:
+        type: number
+      learning_group_id:
+        type: string
+      requires_check_out:
+        type: boolean
+      status:
+        enum:
+        - on_time
+        - late
+        - absent
+        type: string
+      type:
+        enum:
+        - student
+        - teacher
+        - learning_group
+        type: string
+      user_id:
+        type: string
+    required:
+    - status
+    - type
+    - user_id
+    type: object
+  attendance_logs.UpdateDTO:
+    properties:
+      absence_note:
+        type: string
+      absence_reason_id:
+        type: string
+      check_in_at:
+        type: string
+      check_in_lat:
+        type: number
+      check_in_long:
+        type: number
+      check_out_at:
+        type: string
+      check_out_lat:
+        type: number
+      check_out_long:
+        type: number
+      learning_group_id:
+        type: string
+      requires_check_out:
+        type: boolean
+      status:
+        enum:
+        - on_time
+        - late
+        - absent
+        type: string
+      type:
+        enum:
+        - student
+        - teacher
+        - learning_group
+        type: string
+      user_id:
+        type: string
+    type: object
+  auth.LoginDTO:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      remember_me:
+        type: boolean
+    required:
+    - email
+    - password
+    type: object
+  auth.RegisterDTO:
+    properties:
+      email:
+        type: string
+      institution_name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      password:
+        minLength: 6
+        type: string
+      website:
+        maxLength: 255
+        type: string
+    required:
+    - email
+    - institution_name
+    - name
+    - password
+    type: object
+  auth.ResetPasswordDTO:
+    properties:
+      password:
+        minLength: 6
+        type: string
+      reset_by_name:
+        type: string
+      user_id:
+        type: string
+    required:
+    - password
+    - user_id
+    type: object
+  auth.StudentScanLoginDTO:
+    properties:
+      barcode:
+        maxLength: 255
+        type: string
+      institution_code:
+        maxLength: 100
+        type: string
+      pin:
+        maxLength: 8
+        minLength: 4
+        type: string
+    required:
+    - barcode
+    - institution_code
+    - pin
+    type: object
+  export.ColumnDTO:
+    properties:
+      alias:
+        type: string
+      foreignKey:
+        type: string
+      key:
+        type: string
+      label:
+        type: string
+      table:
+        type: string
+    type: object
+  export.ExportDTO:
+    properties:
+      column:
+        items:
+          $ref: '#/definitions/export.ColumnDTO'
+        type: array
+      filename:
+        type: string
+      limit:
+        type: integer
+      models:
+        type: string
+      pageSize:
+        type: integer
+      title:
+        type: string
+    type: object
+  learning_group_members.CreateDTO:
+    properties:
+      learning_group_id:
+        type: string
+      role_in_group:
+        enum:
+        - instructor
+        - student
+        type: string
+      user_id:
+        type: string
+    required:
+    - learning_group_id
+    - role_in_group
+    - user_id
+    type: object
+  learning_group_members.UpdateDTO:
+    properties:
+      learning_group_id:
+        type: string
+      role_in_group:
+        enum:
+        - instructor
+        - student
+        type: string
+      user_id:
+        type: string
+    type: object
+  learning_groups.CreateDTO:
+    properties:
+      academic_year:
+        type: string
+      code:
+        type: string
+      department:
+        maxLength: 100
+        type: string
+      institution_id:
+        type: string
+      is_active:
+        type: boolean
+      level:
+        type: integer
+      major:
+        maxLength: 100
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      type:
+        enum:
+        - school-class
+        - university-class
+        - club
+        type: string
+    required:
+    - code
+    - institution_id
+    - level
+    - name
+    - type
+    type: object
+  learning_groups.UpdateDTO:
+    properties:
+      academic_year:
+        type: string
+      code:
+        type: string
+      department:
+        maxLength: 100
+        type: string
+      institution_id:
+        type: string
+      is_active:
+        type: boolean
+      level:
+        type: integer
+      major:
+        maxLength: 100
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      type:
+        enum:
+        - school-class
+        - university-class
+        - club
+        type: string
+    type: object
+  quiz_sessions.Answer:
+    properties:
+      is_correct:
+        type: boolean
+      points_earned:
+        minimum: 0
+        type: integer
+      question_id:
+        type: string
+      selected_answer:
+        type: string
+    required:
+    - is_correct
+    - points_earned
+    - question_id
+    - selected_answer
+    type: object
+  quiz_sessions.CheatingLog:
+    properties:
+      note:
+        type: string
+      penalty:
+        description: minutes deducted
+        type: integer
+      timestamp:
+        type: string
+      type:
+        description: e.g. "tab-switch", "blur", "focus-lost"
+        type: string
+    required:
+    - penalty
+    - timestamp
+    - type
+    type: object
+  quiz_sessions.CreateDTO:
+    properties:
+      device_info:
+        type: string
+      quiz_id:
+        type: string
+      start_time:
+        type: string
+      user_id:
+        type: string
+    required:
+    - quiz_id
+    - start_time
+    - user_id
+    type: object
+  quiz_sessions.UpdateDTO:
+    properties:
+      answers:
+        items:
+          $ref: '#/definitions/quiz_sessions.Answer'
+        type: array
+      cheating_count:
+        minimum: 0
+        type: integer
+      cheating_logs:
+        items:
+          $ref: '#/definitions/quiz_sessions.CheatingLog'
+        type: array
+      device_info:
+        type: string
+      end_time:
+        type: string
+      score:
+        minimum: 0
+        type: number
+      status:
+        enum:
+        - in_progress
+        - submitted
+        - timeout
+        type: string
+    type: object
+  quizzes.CreateDTO:
+    properties:
+      cheating_penalty_minutes:
+        minimum: 0
+        type: integer
+      created_user_id:
+        type: string
+      description:
+        type: string
+      duration_minutes:
+        minimum: 1
+        type: integer
+      end_time:
+        type: string
+      institution_id:
+        type: string
+      learning_group_id:
+        type: string
+      max_cheating_warnings:
+        minimum: 0
+        type: integer
+      quiz_questions:
+        items:
+          $ref: '#/definitions/quizzes.QuizQuestion'
+        type: array
+      start_time:
+        type: string
+      title:
+        type: string
+      type:
+        enum:
+        - quiz
+        - midterm
+        - final
+        type: string
+    required:
+    - created_user_id
+    - description
+    - duration_minutes
+    - end_time
+    - institution_id
+    - learning_group_id
+    - quiz_questions
+    - start_time
+    - title
+    - type
+    type: object
+  quizzes.QuizOption:
+    properties:
+      label:
+        type: string
+      value:
+        type: string
+    required:
+    - label
+    - value
+    type: object
+  quizzes.QuizQuestion:
+    properties:
+      correct_answer:
+        type: string
+      options:
+        items:
+          $ref: '#/definitions/quizzes.QuizOption'
+        type: array
+      points:
+        minimum: 1
+        type: integer
+      question_text:
+        type: string
+      type:
+        enum:
+        - multiple_choice
+        - essay
+        - true_false
+        type: string
+    required:
+    - correct_answer
+    - options
+    - points
+    - question_text
+    - type
+    type: object
+  quizzes.UpdateDTO:
+    properties:
+      cheating_penalty_minutes:
+        minimum: 0
+        type: integer
+      description:
+        type: string
+      duration_minutes:
+        minimum: 1
+        type: integer
+      end_time:
+        type: string
+      max_cheating_warnings:
+        minimum: 0
+        type: integer
+      quiz_questions:
+        items:
+          $ref: '#/definitions/quizzes.QuizQuestion'
+        type: array
+      start_time:
+        type: string
+      title:
+        type: string
+      type:
+        enum:
+        - quiz
+        - midterm
+        - final
+        type: string
+    type: object
+  roles.CreateDTO:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      permissions:
+        items:
+          $ref: '#/definitions/roles.PermissionItem'
+        type: array
+    required:
+    - name
+    type: object
+  roles.PermissionItem:
+    properties:
+      action:
+        type: string
+      model:
+        type: string
+    required:
+    - action
+    - model
+    type: object
+  roles.UpdateDTO:
+    properties:
+      description:
+        type: string
+      name:
+        maxLength: 100
+        type: string
+      permissions:
+        items:
+          $ref: '#/definitions/roles.PermissionItem'
+        type: array
+    type: object
+info:
+  contact: {}
+  description: Public API documentation served through QRUPI API Gateway.
+  title: QRUPI V2 API
+  version: "2.0"
+paths:
+  /activities:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all Activities
+      tags:
+      - Activity API
+    post:
+      parameters:
+      - description: Activity Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/activities.CreateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Activity
+      tags:
+      - Activity API
+  /activities/{id}:
+    delete:
+      parameters:
+      - description: Activity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Activity permanently
+      tags:
+      - Activity API
+    get:
+      parameters:
+      - description: Activity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get Activity by ID
+      tags:
+      - Activity API
+    put:
+      parameters:
+      - description: Activity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Activity Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/activities.UpdateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update Activity
+      tags:
+      - Activity API
+  /activities/{id}/archived:
+    delete:
+      parameters:
+      - description: Activity ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive Activity
+      tags:
+      - Activity API
+  /activities/bulk:
+    post:
+      description: Creates up to 200 activities directly; larger requests up to 10,000
+        are queued and return a job ID
+      parameters:
+      - description: Bulk Activity Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/activities.BulkCreateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Activities in bulk
+      tags:
+      - Activity API
+  /activity-bulk-jobs/{id}:
+    get:
+      parameters:
+      - description: Bulk Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get Activity bulk job status
+      tags:
+      - Activity API
+  /activity-categories:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all Activity Categories
+      tags:
+      - Activity Category API
+    post:
+      parameters:
+      - description: Activity Category Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/activitycategories.CreateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Activity Category
+      tags:
+      - Activity Category API
+  /activity-categories/{id}:
+    delete:
+      parameters:
+      - description: Activity Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Activity Category permanently
+      tags:
+      - Activity Category API
+    get:
+      parameters:
+      - description: Activity Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get Activity Category by ID
+      tags:
+      - Activity Category API
+    put:
+      parameters:
+      - description: Activity Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Activity Category Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/activitycategories.UpdateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update Activity Category
+      tags:
+      - Activity Category API
+  /activity-categories/{id}/archived:
+    delete:
+      parameters:
+      - description: Activity Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive Activity Category
+      tags:
+      - Activity Category API
+  /activity-items:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all Activity Items
+      tags:
+      - Activity Item API
+    post:
+      parameters:
+      - description: Activity Item Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/activityitems.CreateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Activity Item
+      tags:
+      - Activity Item API
+  /activity-items/{id}:
+    delete:
+      parameters:
+      - description: Activity Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Activity Item permanently
+      tags:
+      - Activity Item API
+    get:
+      parameters:
+      - description: Activity Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get Activity Item by ID
+      tags:
+      - Activity Item API
+    put:
+      parameters:
+      - description: Activity Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Activity Item Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/activityitems.UpdateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update Activity Item
+      tags:
+      - Activity Item API
+  /activity-items/{id}/archived:
+    delete:
+      parameters:
+      - description: Activity Item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive Activity Item
+      tags:
+      - Activity Item API
+  /attendance-absence-reasons:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all Attendance Absence Reasons
+      tags:
+      - Attendance Absence Reason API
+    post:
+      parameters:
+      - description: Attendance Absence Reason Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/attendance_absence_reasons.CreateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Attendance Absence Reason
+      tags:
+      - Attendance Absence Reason API
+  /attendance-absence-reasons/{id}:
+    delete:
+      parameters:
+      - description: Attendance Absence Reason ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Attendance Absence Reason permanently
+      tags:
+      - Attendance Absence Reason API
+    get:
+      parameters:
+      - description: Attendance Absence Reason ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get Attendance Absence Reason by ID
+      tags:
+      - Attendance Absence Reason API
+    put:
+      parameters:
+      - description: Attendance Absence Reason ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Attendance Absence Reason Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/attendance_absence_reasons.UpdateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update Attendance Absence Reason
+      tags:
+      - Attendance Absence Reason API
+  /attendance-absence-reasons/{id}/archived:
+    delete:
+      parameters:
+      - description: Attendance Absence Reason ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive Attendance Absence Reason
+      tags:
+      - Attendance Absence Reason API
+  /attendance-logs:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all Attendance Logs
+      tags:
+      - Attendance Log API
+    post:
+      parameters:
+      - description: Attendance Log Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/attendance_logs.CreateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Attendance Log
+      tags:
+      - Attendance Log API
+  /attendance-logs/{id}:
+    delete:
+      parameters:
+      - description: Attendance Log ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Attendance Log permanently
+      tags:
+      - Attendance Log API
+    get:
+      parameters:
+      - description: Attendance Log ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get Attendance Log by ID
+      tags:
+      - Attendance Log API
+    put:
+      parameters:
+      - description: Attendance Log ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Attendance Log Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/attendance_logs.UpdateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update Attendance Log
+      tags:
+      - Attendance Log API
+  /attendance-logs/{id}/archived:
+    delete:
+      parameters:
+      - description: Attendance Log ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive Attendance Log
+      tags:
+      - Attendance Log API
+  /attendance-logs/{id}/check-out:
+    put:
+      parameters:
+      - description: Attendance Log ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Attendance Check-out Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/attendance_logs.CheckOutDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Check out Attendance
+      tags:
+      - Attendance Log API
+  /attendance-logs/check-in:
+    post:
+      parameters:
+      - description: Attendance Check-in Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/attendance_logs.CheckInDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Check in Attendance
+      tags:
+      - Attendance Log API
+  /auth/login:
+    post:
+      parameters:
+      - description: Login Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginDTO'
+      responses: {}
+      summary: Login user
+      tags:
+      - Auth API
+  /auth/register:
+    post:
+      parameters:
+      - description: Register Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterDTO'
+      responses: {}
+      summary: Register user
+      tags:
+      - Auth API
+  /auth/reset-password:
+    post:
+      parameters:
+      - description: Reset Password Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ResetPasswordDTO'
+      responses: {}
+      summary: Reset password user
+      tags:
+      - Auth API
+  /auth/student/scan:
+    post:
+      parameters:
+      - description: Student Scan Login Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/auth.StudentScanLoginDTO'
+      responses: {}
+      summary: Login student using barcode and PIN
+      tags:
+      - Auth API
+  /districts:
+    get:
+      parameters:
+      - description: Filter by regency code
+        in: query
+        name: regency_code
+        type: string
+      - description: Search district name
+        in: query
+        name: search
+        type: string
+      - description: Sort field
+        enum:
+        - code
+        - name
+        - created_at
+        - updated_at
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Results per page (max 500)
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all districts
+      tags:
+      - Region API
+  /districts/{code}:
+    get:
+      parameters:
+      - description: District code
+        in: path
+        name: code
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get district by code
+      tags:
+      - Region API
+  /export/excel:
+    post:
+      parameters:
+      - description: Export Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/export.ExportDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Export excel
+      tags:
+      - Export API
+  /institutions:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order (asc or desc)
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all Institution
+      tags:
+      - Institution API
+    post:
+      parameters:
+      - in: formData
+        maxLength: 255
+        name: address
+        type: string
+      - in: formData
+        maxLength: 255
+        name: avatar_url
+        type: string
+      - in: formData
+        maxLength: 100
+        name: country
+        type: string
+      - in: formData
+        name: current_subscription_id
+        type: string
+      - in: formData
+        maxLength: 20
+        name: district_code
+        type: string
+      - in: formData
+        name: email
+        required: true
+        type: string
+      - in: formData
+        name: latitude
+        type: number
+      - in: formData
+        name: longitude
+        type: number
+      - in: formData
+        maxLength: 255
+        name: name
+        required: true
+        type: string
+      - in: formData
+        maxLength: 20
+        name: phone
+        type: string
+      - in: formData
+        maxLength: 20
+        name: province_code
+        type: string
+      - in: formData
+        maxLength: 20
+        name: regency_code
+        type: string
+      - enum:
+        - active
+        - inactive
+        in: formData
+        name: status
+        type: string
+      - in: formData
+        maxLength: 20
+        name: village_code
+        type: string
+      - in: formData
+        maxLength: 255
+        name: website
+        type: string
+      - in: formData
+        maxLength: 20
+        name: zip_code
+        type: string
+      - description: Upload File (optional)
+        in: formData
+        name: file
+        type: file
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Institution
+      tags:
+      - Institution API
+  /institutions/{id}:
+    delete:
+      parameters:
+      - description: Institution ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Institution permanently
+      tags:
+      - Institution API
+    get:
+      parameters:
+      - description: Institution ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get by id Institution
+      tags:
+      - Institution API
+    put:
+      parameters:
+      - description: Institution ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - in: formData
+        maxLength: 255
+        name: address
+        type: string
+      - in: formData
+        maxLength: 255
+        name: avatar_url
+        type: string
+      - in: formData
+        maxLength: 100
+        name: country
+        type: string
+      - in: formData
+        name: current_subscription_id
+        type: string
+      - in: formData
+        maxLength: 20
+        name: district_code
+        type: string
+      - in: formData
+        name: latitude
+        type: number
+      - in: formData
+        name: longitude
+        type: number
+      - in: formData
+        maxLength: 255
+        name: name
+        type: string
+      - in: formData
+        maxLength: 20
+        name: phone
+        type: string
+      - in: formData
+        maxLength: 20
+        name: province_code
+        type: string
+      - in: formData
+        maxLength: 20
+        name: regency_code
+        type: string
+      - enum:
+        - active
+        - inactive
+        in: formData
+        name: status
+        type: string
+      - in: formData
+        maxLength: 20
+        name: village_code
+        type: string
+      - in: formData
+        maxLength: 255
+        name: website
+        type: string
+      - in: formData
+        maxLength: 20
+        name: zip_code
+        type: string
+      - description: Upload File (optional)
+        in: formData
+        name: file
+        type: file
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update Institution
+      tags:
+      - Institution API
+  /institutions/{id}/archived:
+    delete:
+      parameters:
+      - description: Institution ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive (soft delete) Institution
+      tags:
+      - Institution API
+  /learning-group-members:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all Learning Group Member
+      tags:
+      - Learning Group Member API
+    post:
+      parameters:
+      - description: Learning Group Member Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/learning_group_members.CreateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Learning Group Member
+      tags:
+      - Learning Group Member API
+  /learning-group-members/{id}:
+    delete:
+      parameters:
+      - description: Learning Group Member ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Learning Group Member permanently
+      tags:
+      - Learning Group Member API
+    get:
+      parameters:
+      - description: Learning Group Member ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get Learning Group Member by ID
+      tags:
+      - Learning Group Member API
+    put:
+      parameters:
+      - description: Learning Group Member ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Learning Group Member Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/learning_group_members.UpdateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update Learning Group Member
+      tags:
+      - Learning Group Member API
+  /learning-group-members/{id}/archived:
+    delete:
+      parameters:
+      - description: Learning Group Member ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive Learning Group Member
+      tags:
+      - Learning Group Member API
+  /learning-groups:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all Learning Group
+      tags:
+      - Learning Group API
+    post:
+      parameters:
+      - description: Learning Group Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/learning_groups.CreateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Learning Group
+      tags:
+      - Learning Group API
+  /learning-groups/{id}:
+    delete:
+      parameters:
+      - description: Learning Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Learning Group permanently
+      tags:
+      - Learning Group API
+    get:
+      parameters:
+      - description: Learning Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get Learning Group by ID
+      tags:
+      - Learning Group API
+    put:
+      parameters:
+      - description: Learning Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Learning Group Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/learning_groups.UpdateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update Learning Group
+      tags:
+      - Learning Group API
+  /learning-groups/{id}/archived:
+    delete:
+      parameters:
+      - description: Learning Group ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive Learning Group
+      tags:
+      - Learning Group API
+  /learning-resources:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all Learning Resource
+      tags:
+      - Learning Resource API
+    post:
+      parameters:
+      - in: formData
+        name: description
+        type: string
+      - in: formData
+        name: file_url
+        type: string
+      - collectionFormat: csv
+        in: formData
+        items:
+          type: string
+        minItems: 1
+        name: learning_group_ids
+        required: true
+        type: array
+      - in: formData
+        name: title
+        required: true
+        type: string
+      - enum:
+        - file
+        - video
+        - link
+        in: formData
+        name: type
+        type: string
+      - in: formData
+        name: uploaded_user_id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Learning Resource
+      tags:
+      - Learning Resource API
+  /learning-resources/{id}:
+    delete:
+      parameters:
+      - description: Learning Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Learning Resource permanently
+      tags:
+      - Learning Resource API
+    get:
+      parameters:
+      - description: Learning Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get Learning Resource by ID
+      tags:
+      - Learning Resource API
+    put:
+      parameters:
+      - description: Learning Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - in: formData
+        name: description
+        type: string
+      - in: formData
+        name: file_url
+        type: string
+      - collectionFormat: csv
+        in: formData
+        items:
+          type: string
+        name: learning_group_ids
+        type: array
+      - in: formData
+        name: title
+        type: string
+      - enum:
+        - file
+        - video
+        - link
+        in: formData
+        name: type
+        type: string
+      - in: formData
+        name: uploaded_user_id
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update Learning Resource
+      tags:
+      - Learning Resource API
+  /learning-resources/{id}/archived:
+    delete:
+      parameters:
+      - description: Learning Resource ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive Learning Resource
+      tags:
+      - Learning Resource API
+  /provinces:
+    get:
+      parameters:
+      - description: Search province name
+        in: query
+        name: search
+        type: string
+      - description: Sort field
+        enum:
+        - code
+        - name
+        - created_at
+        - updated_at
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Results per page (max 500)
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all provinces
+      tags:
+      - Region API
+  /provinces/{code}:
+    get:
+      parameters:
+      - description: Province code
+        in: path
+        name: code
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get province by code
+      tags:
+      - Region API
+  /quiz-sessions:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all Quiz Session
+      tags:
+      - Quiz Session API
+    post:
+      parameters:
+      - description: Quiz Session Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/quiz_sessions.CreateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Quiz Session
+      tags:
+      - Quiz Session API
+  /quiz-sessions/{id}:
+    delete:
+      parameters:
+      - description: Quiz Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Quiz Session permanently
+      tags:
+      - Quiz Session API
+    get:
+      parameters:
+      - description: Quiz Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get Quiz Session by ID
+      tags:
+      - Quiz Session API
+    put:
+      parameters:
+      - description: Quiz Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Quiz Session Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/quiz_sessions.UpdateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update Quiz Session
+      tags:
+      - Quiz Session API
+  /quiz-sessions/{id}/archived:
+    delete:
+      parameters:
+      - description: Quiz Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive Quiz Session
+      tags:
+      - Quiz Session API
+  /quizzes:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all Quiz
+      tags:
+      - Quiz API
+    post:
+      parameters:
+      - description: Quiz Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/quizzes.CreateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Quiz
+      tags:
+      - Quiz API
+  /quizzes/{id}:
+    delete:
+      parameters:
+      - description: Quiz ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Quiz permanently
+      tags:
+      - Quiz API
+    get:
+      parameters:
+      - description: Quiz ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get Quiz by ID
+      tags:
+      - Quiz API
+    put:
+      parameters:
+      - description: Quiz ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Quiz Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/quizzes.UpdateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update Quiz
+      tags:
+      - Quiz API
+  /quizzes/{id}/archived:
+    delete:
+      parameters:
+      - description: Quiz ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive Quiz
+      tags:
+      - Quiz API
+  /regencies:
+    get:
+      parameters:
+      - description: Filter by province code
+        in: query
+        name: province_code
+        type: string
+      - description: Search regency name
+        in: query
+        name: search
+        type: string
+      - description: Sort field
+        enum:
+        - code
+        - name
+        - created_at
+        - updated_at
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Results per page (max 500)
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all regencies
+      tags:
+      - Region API
+  /regencies/{code}:
+    get:
+      parameters:
+      - description: Regency code
+        in: path
+        name: code
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get regency by code
+      tags:
+      - Region API
+  /roles:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order (asc or desc)
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all Role
+      tags:
+      - Role API
+    post:
+      parameters:
+      - description: Role Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/roles.CreateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Role
+      tags:
+      - Role API
+  /roles/{id}:
+    delete:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete Role permanently
+      tags:
+      - Role API
+    get:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get by id Role
+      tags:
+      - Role API
+    put:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/roles.UpdateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update Role
+      tags:
+      - Role API
+  /roles/{id}/archived:
+    delete:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive (soft delete) Role
+      tags:
+      - Role API
+  /roles/master-permissions:
+    get:
+      responses: {}
+      summary: Get all Master Permissions
+      tags:
+      - Role API
+  /users:
+    get:
+      parameters:
+      - description: Sort by field
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order (asc or desc)
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Number of results per page
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all User
+      tags:
+      - User API
+    post:
+      parameters:
+      - in: formData
+        name: avatar_url
+        type: string
+      - in: formData
+        maxLength: 100
+        name: context_code
+        type: string
+      - in: formData
+        maxLength: 50
+        name: context_type
+        type: string
+      - in: formData
+        name: email
+        type: string
+      - in: formData
+        name: institution_id
+        type: string
+      - enum:
+        - active
+        - inactive
+        in: formData
+        name: is_active
+        required: true
+        type: string
+      - in: formData
+        maxLength: 255
+        minLength: 2
+        name: name
+        required: true
+        type: string
+      - in: formData
+        minLength: 6
+        name: password
+        type: string
+      - in: formData
+        maxLength: 20
+        name: phone
+        type: string
+      - in: formData
+        maxLength: 8
+        minLength: 4
+        name: pin
+        type: string
+      - in: formData
+        name: role_id
+        required: true
+        type: string
+      - enum:
+        - student
+        - teacher
+        - admin
+        - staff
+        in: formData
+        name: type
+        type: string
+      - description: Upload File (optional)
+        in: formData
+        name: file
+        type: file
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create User
+      tags:
+      - User API
+  /users/{id}:
+    delete:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Delete User permanently
+      tags:
+      - User API
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get by id User
+      tags:
+      - User API
+    put:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - in: formData
+        name: avatar_url
+        type: string
+      - in: formData
+        maxLength: 100
+        name: context_code
+        type: string
+      - in: formData
+        maxLength: 50
+        name: context_type
+        type: string
+      - in: formData
+        name: email
+        type: string
+      - in: formData
+        name: institution_id
+        type: string
+      - enum:
+        - active
+        - inactive
+        in: formData
+        name: is_active
+        type: string
+      - in: formData
+        maxLength: 255
+        minLength: 2
+        name: name
+        type: string
+      - in: formData
+        minLength: 6
+        name: password
+        type: string
+      - in: formData
+        maxLength: 20
+        name: phone
+        type: string
+      - in: formData
+        maxLength: 8
+        minLength: 4
+        name: pin
+        type: string
+      - in: formData
+        name: role_id
+        type: string
+      - enum:
+        - student
+        - teacher
+        - admin
+        - staff
+        in: formData
+        name: type
+        type: string
+      - description: Upload File (optional)
+        in: formData
+        name: file
+        type: file
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Update User
+      tags:
+      - User API
+  /users/{id}/archived:
+    delete:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Archive (soft delete) User
+      tags:
+      - User API
+  /users/{id}/barcode:
+    get:
+      parameters:
+      - description: Student user ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - image/png
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Download student barcode
+      tags:
+      - User API
+  /users/import-excel:
+    post:
+      parameters:
+      - description: Excel file (.xlsx)
+        in: formData
+        name: file
+        required: true
+        type: file
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Import Users by Excel
+      tags:
+      - User API
+  /users/template-excel:
+    get:
+      responses: {}
+      summary: Download Users Excel Template
+      tags:
+      - User API
+  /villages:
+    get:
+      parameters:
+      - description: Filter by district code
+        in: query
+        name: district_code
+        type: string
+      - description: Search village name
+        in: query
+        name: search
+        type: string
+      - description: Sort field
+        enum:
+        - code
+        - name
+        - created_at
+        - updated_at
+        in: query
+        name: sortBy
+        type: string
+      - description: Sort order
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sortOrder
+        type: string
+      - description: Results per page (max 500)
+        in: query
+        name: limit
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get all villages
+      tags:
+      - Region API
+  /villages/{code}:
+    get:
+      parameters:
+      - description: Village code
+        in: path
+        name: code
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get village by code
+      tags:
+      - Region API
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
