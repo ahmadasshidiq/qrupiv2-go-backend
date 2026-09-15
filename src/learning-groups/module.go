@@ -20,7 +20,7 @@ func RegisterLearningGroupModule(router *gin.RouterGroup, db *gorm.DB) {
 		group.GET("/:id", permissions.Handler("learning-groups", "get-by-id"), controller.GetByID)
 		group.POST("", permissions.Handler("learning-groups", "create"), controller.Create)
 		group.PUT("/:id", permissions.Handler("learning-groups", "update"), controller.Update)
-		group.DELETE("/:id/archived", permissions.Handler("learning-groups", "delete"), controller.Archive)
+		group.DELETE("/:id/archived", permissions.Handler("learning-groups", "archive"), controller.Archive)
 		group.DELETE("/:id", permissions.Handler("learning-groups", "delete"), controller.Delete)
 	}
 }

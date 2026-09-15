@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"image/png"
 	"io"
 	"log/slog"
 	"math/rand"
@@ -22,8 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/boombuler/barcode"
-	"github.com/boombuler/barcode/code128"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/xuri/excelize/v2"
@@ -76,7 +73,7 @@ func (s *UserService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 			u.type,
 			u.phone,
 			u.barcode,
-			u.is_active,
+			u.status,
 			u.avatar_url,
 			u.role_id,
 			r.name as role_name,
@@ -214,7 +211,7 @@ func (s *UserService) create(ctx *gin.Context, dto CreateDTO) (*models.User, err
 		Phone:         dto.Phone,
 		ContextType:   dto.ContextType,
 		ContextCode:   dto.ContextCode,
-		IsActive:      models.UserStatus(dto.IsActive),
+		Status:        models.UserStatus(dto.Status),
 		Password:      encodedTwo,
 		LayerOne:      string(layerOneStr),
 		LayerTwo:      layerTwo,
@@ -317,31 +314,27 @@ func (s *UserService) generateUniqueBarcode() (string, error) {
 	return "", errors.New("unable to generate unique barcode")
 }
 
-func (s *UserService) generateBarcodeImage(ctx *gin.Context, id string) ([]byte, error) {
+func (s *UserService) getQRCode(ctx *gin.Context, id string) (string, error) {
 	var user models.User
-	query := s.DB.Select("id", "type", "barcode").Where("id = ?", id)
+	query := s.DB.Select("users.id", "users.type", "users.barcode", "users.institution_id").Joins("JOIN institutions ON institutions.id = users.institution_id").Where("users.id = ?", id)
 	if institutionID, scoped := authenticatedInstitutionID(ctx); scoped {
 		query = query.Where("institution_id = ?", institutionID)
 	}
 	if err := query.First(&user).Error; err != nil {
-		return nil, errors.New("user not found")
+		return "", errors.New("user not found")
 	}
 	if user.Type != "student" || user.Barcode == "" {
-		return nil, errors.New("student barcode not found")
+		return "", errors.New("student QR code not found")
 	}
-	code, err := code128.Encode(user.Barcode)
+	var institution models.Institution
+	if err := s.DB.Select("code").First(&institution, "id = ?", user.InstitutionID).Error; err != nil {
+		return "", err
+	}
+	data, err := json.Marshal(map[string]string{"institution_code": institution.Code, "barcode": user.Barcode})
 	if err != nil {
-		return nil, fmt.Errorf("encode barcode: %w", err)
+		return "", err
 	}
-	scaled, err := barcode.Scale(code, 640, 160)
-	if err != nil {
-		return nil, fmt.Errorf("scale barcode: %w", err)
-	}
-	var output bytes.Buffer
-	if err := png.Encode(&output, scaled); err != nil {
-		return nil, fmt.Errorf("render barcode: %w", err)
-	}
-	return output.Bytes(), nil
+	return string(data), nil
 }
 
 func (s *UserService) NotifyPasswordReset(userID, userName string) {
@@ -440,8 +433,8 @@ func (s *UserService) update(ctx *gin.Context, id string, dto UpdateDTO) (*model
 		data.ContextCode = *dto.ContextCode
 	}
 
-	if dto.IsActive != nil {
-		data.IsActive = models.UserStatus(*dto.IsActive)
+	if dto.Status != nil {
+		data.Status = models.UserStatus(*dto.Status)
 	}
 
 	if dto.Password != nil {
@@ -952,7 +945,7 @@ func (s *UserService) importUsersByExcel(ctx *gin.Context, file io.Reader) (int,
 		isActive := strings.ToLower(get(9))
 
 		if name == "" || email == "" || password == "" || roleName == "" || isActive == "" {
-			rowErrors = append(rowErrors, fmt.Sprintf("row %d: name,email,password,role_name,is_active wajib diisi", i+1))
+			rowErrors = append(rowErrors, fmt.Sprintf("row %d: name,email,password,role_name,status wajib diisi", i+1))
 			continue
 		}
 		if isActive != string(models.UserStatusActive) && isActive != string(models.UserStatusInactive) {
@@ -1030,7 +1023,7 @@ func (s *UserService) importUsersByExcel(ctx *gin.Context, file io.Reader) (int,
 			Phone:         phone,
 			ContextType:   contextType,
 			ContextCode:   contextCode,
-			IsActive:      models.UserStatus(isActive),
+			Status:        models.UserStatus(isActive),
 			Password:      encodedTwo,
 			LayerOne:      string(layerOneStr),
 			LayerTwo:      layerTwo,

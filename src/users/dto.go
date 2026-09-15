@@ -18,7 +18,7 @@ type CreateDTO struct {
 	Phone         string `form:"phone" binding:"omitempty,max=20"`
 	ContextCode   string `form:"context_code" binding:"omitempty,max=100"`
 	ContextType   string `form:"context_type" binding:"omitempty,max=50"`
-	IsActive      string `form:"is_active" binding:"required,oneof=active inactive"`
+	Status        string `form:"status" binding:"required,oneof=active inactive"`
 	AvatarURL     string `form:"avatar_url" binding:"omitempty,url"`
 }
 
@@ -33,6 +33,6 @@ type UpdateDTO struct {
 	Phone         *string `form:"phone" binding:"omitempty,max=20"`
 	ContextType   *string `form:"context_type" binding:"omitempty,max=50"`
 	ContextCode   *string `form:"context_code" binding:"omitempty,max=100"`
-	IsActive      *string `form:"is_active" binding:"omitempty,oneof=active inactive"`
+	Status        *string `form:"status" binding:"omitempty,oneof=active inactive"`
 	AvatarURL     *string `form:"avatar_url" binding:"omitempty,url"`
 }

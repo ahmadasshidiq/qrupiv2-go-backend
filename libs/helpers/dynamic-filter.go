@@ -59,13 +59,40 @@ func BuildDynamicWhereClause(filters map[string]interface{}) WhereClauseResult {
 		case "is null", "is not null":
 			where += fmt.Sprintf(" and %s %s", field, sqlOp)
 		case "in", "not in":
-			if arr, ok := value.([]interface{}); ok && len(arr) > 0 {
+			var arr []interface{}
+
+			switch v := value.(type) {
+			case []interface{}:
+				arr = v
+
+			case []string:
+				for _, item := range v {
+					arr = append(arr, item)
+				}
+
+			case string:
+				for _, item := range strings.Split(v, ",") {
+					item = strings.TrimSpace(item)
+					if item != "" {
+						arr = append(arr, item)
+					}
+				}
+			}
+
+			if len(arr) > 0 {
 				placeholders := make([]string, len(arr))
+
 				for i, v := range arr {
 					placeholders[i] = "?"
 					params = append(params, v)
 				}
-				where += fmt.Sprintf(" and %s %s (%s)", field, sqlOp, strings.Join(placeholders, ", "))
+
+				where += fmt.Sprintf(
+					" and %s %s (%s)",
+					field,
+					sqlOp,
+					strings.Join(placeholders, ", "),
+				)
 			}
 		case "like":
 			where += fmt.Sprintf(" and %s %s ?", field, sqlOp)

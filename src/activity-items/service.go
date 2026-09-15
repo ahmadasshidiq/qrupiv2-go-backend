@@ -5,6 +5,7 @@ import (
 	"clasenna-go-backend/libs/models"
 	"errors"
 	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -24,8 +25,9 @@ func (s *ActivityItemService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*hel
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
 		p["ai.institution_id"] = institutionID
 	}
-	base := `select ai.*, ac.name as category_name from activity_items ai
-		left join activity_categories ac on ac.id = ai.category_id and ac.deleted_at is null`
+	base := `select ai.*, i.name as institution_name, ac.name as category_name, ac.color as category_color from activity_items ai
+		left join activity_categories ac on ac.id = ai.category_id and ac.deleted_at is null
+		left join institutions i on i.id = ai.institution_id and i.deleted_at is null`
 	return helpers.BuildPaginatedQuery(ctx, s.DB, p, "activity_items", base, "", "", dto.SortBy)
 }
 func (s *ActivityItemService) getByID(ctx *gin.Context, id string) (*models.ActivityItem, error) {

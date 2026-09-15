@@ -56,6 +56,7 @@ func (c *LearningResourceController) GetByID(ctx *gin.Context) {
 // @Summary Create Learning Resource
 // @Tags Learning Resource API
 // @Param dto formData CreateDTO true "Learning Resource Data"
+// @Param file formData file false "Learning resource file"
 // @Security BearerAuth
 // @Router /learning-resources [post]
 func (c *LearningResourceController) Create(ctx *gin.Context) {
@@ -76,6 +77,7 @@ func (c *LearningResourceController) Create(ctx *gin.Context) {
 // @Tags Learning Resource API
 // @Param id path string true "Learning Resource ID"
 // @Param dto formData UpdateDTO true "Learning Resource Data"
+// @Param file formData file false "Replacement learning resource file"
 // @Security BearerAuth
 // @Router /learning-resources/{id} [put]
 func (c *LearningResourceController) Update(ctx *gin.Context) {

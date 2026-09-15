@@ -7,6 +7,7 @@ import (
 
 	"clasenna-go-backend/libs/helpers"
 	"clasenna-go-backend/libs/models"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -28,17 +29,20 @@ func (s *AttendanceLogService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*he
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
 		params["u.institution_id"] = institutionID
 	}
-	base := `select al.*, u.name as user_name, u.email as user_email, u.institution_id,
+	base := `select al.*, ar.name as absence_reason_name, u.name as user_name, u.email as user_email, u.context_type as user_context_type, u.context_code as user_context_code ,u.institution_id,
+		ru.name as recorded_user_name,
 		lg.name as learning_group_name
 		from attendance_logs al
 		join users u on u.id = al.user_id
-		left join learning_groups lg on lg.id = al.learning_group_id and lg.deleted_at is null`
+		left join users ru on ru.id = al.recorded_user_id
+		left join learning_groups lg on lg.id = al.learning_group_id and lg.deleted_at is null
+		left join attendance_absence_reasons ar on ar.id = al.absence_reason_id and ar.deleted_at is null`
 	return helpers.BuildPaginatedQuery(ctx, s.DB, params, "attendance_logs", base, "", "", dto.SortBy)
 }
 
 func (s *AttendanceLogService) getByID(ctx *gin.Context, id string) (*models.AttendanceLog, error) {
 	var data models.AttendanceLog
-	query := s.DB.Joins("JOIN users ON users.id = attendance_logs.user_id").Preload("User").Preload("LearningGroup").
+	query := s.DB.Joins("JOIN users ON users.id = attendance_logs.user_id").Preload("User").Preload("RecordedUser").Preload("LearningGroup").
 		Preload("AbsenceReason", func(db *gorm.DB) *gorm.DB { return db.Unscoped() }).Where("attendance_logs.id = ?", id)
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
 		query = query.Where("users.institution_id = ?", institutionID)
@@ -65,8 +69,12 @@ func (s *AttendanceLogService) create(ctx *gin.Context, dto CreateDTO) (*models.
 	if err != nil {
 		return nil, err
 	}
+	recordedUserID, err := uuid.Parse(ctx.GetString("user_id"))
+	if err != nil {
+		return nil, errors.New("authenticated user_id is required")
+	}
 	data := models.AttendanceLog{
-		UserID: userID, LearningGroupID: learningGroupID, Type: attendanceType,
+		UserID: userID, RecordedUserID: &recordedUserID, LearningGroupID: learningGroupID, Type: attendanceType,
 		Status: models.AttendanceStatus(dto.Status), RequiresCheckOut: dto.RequiresCheckOut,
 		AbsenceReasonID: absenceReasonID, AbsenceNote: dto.AbsenceNote,
 		CheckInAt: dto.CheckInAt, CheckInLat: dto.CheckInLat, CheckInLong: dto.CheckInLong,

@@ -108,6 +108,63 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/activities/chart": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns activity chart aggregations scoped to the authenticated institution",
+                "tags": [
+                    "Activity API"
+                ],
+                "summary": "Get activity chart data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Activity category ID",
+                        "name": "category_id",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "positive",
+                            "violation"
+                        ],
+                        "type": "string",
+                        "description": "Activity type",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Learning group ID",
+                        "name": "learning_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Top student limit (default 10, maximum 100)",
+                        "name": "top_limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/activities/{id}": {
             "get": {
                 "security": [
@@ -787,6 +844,32 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/attendance-logs/bulk": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates up to 200 attendance logs atomically; all records are rolled back when one record is invalid",
+                "tags": [
+                    "Attendance Log API"
+                ],
+                "summary": "Create Attendance Logs in bulk",
+                "parameters": [
+                    {
+                        "description": "Bulk Attendance Log Data",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/attendance_logs.BulkCreateDTO"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/attendance-logs/check-in": {
             "post": {
                 "security": [
@@ -1015,6 +1098,26 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/auth.StudentScanLoginDTO"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/auth/student/verify-pin": {
+            "post": {
+                "tags": [
+                    "Auth API"
+                ],
+                "summary": "Verify student PIN after QR scan",
+                "parameters": [
+                    {
+                        "description": "Student PIN Data",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.StudentVerifyPinDTO"
                         }
                     }
                 ],
@@ -1900,6 +2003,12 @@ const docTemplate = `{
                         "name": "uploaded_user_id",
                         "in": "formData",
                         "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Learning resource file",
+                        "name": "file",
+                        "in": "formData"
                     }
                 ],
                 "responses": {}
@@ -1982,6 +2091,12 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "name": "uploaded_user_id",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Replacement learning resource file",
+                        "name": "file",
                         "in": "formData"
                     }
                 ],
@@ -2173,6 +2288,65 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/quiz_sessions.CreateDTO"
                         }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/quiz-sessions/rankings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns school, class, or learning-group rankings using completed quiz-session scores",
+                "tags": [
+                    "Quiz Session API"
+                ],
+                "summary": "Get student quiz rankings",
+                "parameters": [
+                    {
+                        "enum": [
+                            "school",
+                            "class",
+                            "learning_group"
+                        ],
+                        "type": "string",
+                        "description": "Ranking scope",
+                        "name": "scope",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Required for class and learning_group scope",
+                        "name": "learning_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Quiz ID",
+                        "name": "quiz_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Ranking limit (default 50, maximum 100)",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {}
@@ -2779,16 +2953,6 @@ const docTemplate = `{
                         "in": "formData"
                     },
                     {
-                        "enum": [
-                            "active",
-                            "inactive"
-                        ],
-                        "type": "string",
-                        "name": "is_active",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
                         "maxLength": 255,
                         "minLength": 2,
                         "type": "string",
@@ -2818,6 +2982,16 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "name": "role_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "active",
+                            "inactive"
+                        ],
+                        "type": "string",
+                        "name": "status",
                         "in": "formData",
                         "required": true
                     },
@@ -2942,15 +3116,6 @@ const docTemplate = `{
                         "in": "formData"
                     },
                     {
-                        "enum": [
-                            "active",
-                            "inactive"
-                        ],
-                        "type": "string",
-                        "name": "is_active",
-                        "in": "formData"
-                    },
-                    {
                         "maxLength": 255,
                         "minLength": 2,
                         "type": "string",
@@ -2979,6 +3144,15 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "name": "role_id",
+                        "in": "formData"
+                    },
+                    {
+                        "enum": [
+                            "active",
+                            "inactive"
+                        ],
+                        "type": "string",
+                        "name": "status",
                         "in": "formData"
                     },
                     {
@@ -3054,12 +3228,12 @@ const docTemplate = `{
                     }
                 ],
                 "produces": [
-                    "image/png"
+                    "application/json"
                 ],
                 "tags": [
                     "User API"
                 ],
-                "summary": "Download student barcode",
+                "summary": "Get student QR code data",
                 "parameters": [
                     {
                         "type": "string",
@@ -3073,7 +3247,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "file"
+                            "$ref": "#/definitions/clasenna-go-backend_libs_helpers.SuccessResponse"
                         }
                     }
                 }
@@ -3441,6 +3615,9 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "institution_id": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string",
                     "maxLength": 255,
@@ -3458,6 +3635,22 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 255,
                     "minLength": 2
+                }
+            }
+        },
+        "attendance_logs.BulkCreateDTO": {
+            "type": "object",
+            "required": [
+                "attendance_logs"
+            ],
+            "properties": {
+                "attendance_logs": {
+                    "type": "array",
+                    "maxItems": 200,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/attendance_logs.CreateDTO"
+                    }
                 }
             }
         },
@@ -3703,23 +3896,43 @@ const docTemplate = `{
         "auth.StudentScanLoginDTO": {
             "type": "object",
             "required": [
-                "barcode",
-                "institution_code",
-                "pin"
+                "qr_code"
             ],
             "properties": {
-                "barcode": {
+                "qr_code": {
                     "type": "string",
-                    "maxLength": 255
-                },
-                "institution_code": {
-                    "type": "string",
-                    "maxLength": 100
-                },
+                    "maxLength": 1000
+                }
+            }
+        },
+        "auth.StudentVerifyPinDTO": {
+            "type": "object",
+            "required": [
+                "pin",
+                "qr_code"
+            ],
+            "properties": {
                 "pin": {
                     "type": "string",
                     "maxLength": 8,
                     "minLength": 4
+                },
+                "qr_code": {
+                    "type": "string",
+                    "maxLength": 1000
+                }
+            }
+        },
+        "clasenna-go-backend_libs_helpers.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string"
+                },
+                "meta": {},
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -3755,6 +3968,12 @@ const docTemplate = `{
                 "filename": {
                     "type": "string"
                 },
+                "filters": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/export.FilterDTO"
+                    }
+                },
                 "limit": {
                     "type": "integer"
                 },
@@ -3767,6 +3986,18 @@ const docTemplate = `{
                 "title": {
                     "type": "string"
                 }
+            }
+        },
+        "export.FilterDTO": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "operator": {
+                    "type": "string"
+                },
+                "value": {}
             }
         },
         "learning_group_members.CreateDTO": {
@@ -3817,6 +4048,7 @@ const docTemplate = `{
                 "institution_id",
                 "level",
                 "name",
+                "status",
                 "type"
             ],
             "properties": {
@@ -3833,9 +4065,6 @@ const docTemplate = `{
                 "institution_id": {
                     "type": "string"
                 },
-                "is_active": {
-                    "type": "boolean"
-                },
                 "level": {
                     "type": "integer"
                 },
@@ -3847,6 +4076,13 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 2
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
                 },
                 "type": {
                     "type": "string",
@@ -3874,9 +4110,6 @@ const docTemplate = `{
                 "institution_id": {
                     "type": "string"
                 },
-                "is_active": {
-                    "type": "boolean"
-                },
                 "level": {
                     "type": "integer"
                 },
@@ -3888,6 +4121,13 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 2
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "inactive"
+                    ]
                 },
                 "type": {
                     "type": "string",

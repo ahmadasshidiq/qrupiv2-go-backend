@@ -48,6 +48,10 @@ func (s *LearningResourceService) getByID(id string) (*models.LearningResource, 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
+	if err != nil {
+		return nil, err
+	}
+	data.LearningGroupIDs = learningGroupIDs(data.LearningGroups)
 	return &data, err
 }
 
@@ -93,6 +97,7 @@ func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*mode
 		return nil, err
 	}
 	data.LearningGroups = groups
+	data.LearningGroupIDs = learningGroupIDs(groups)
 	return &data, nil
 }
 
@@ -175,7 +180,16 @@ func (s *LearningResourceService) update(ctx *gin.Context, id string, dto Update
 	} else {
 		_ = s.DB.Model(&data).Association("LearningGroups").Find(&data.LearningGroups)
 	}
+	data.LearningGroupIDs = learningGroupIDs(data.LearningGroups)
 	return &data, nil
+}
+
+func learningGroupIDs(groups []models.LearningGroup) []uuid.UUID {
+	ids := make([]uuid.UUID, len(groups))
+	for index := range groups {
+		ids[index] = groups[index].ID
+	}
+	return ids
 }
 
 func (s *LearningResourceService) resolveLearningGroups(values []string) ([]models.LearningGroup, error) {

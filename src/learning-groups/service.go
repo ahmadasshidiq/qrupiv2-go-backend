@@ -89,7 +89,7 @@ func (s *LearningGroupService) create(dto CreateDTO) (*models.LearningGroup, err
 		Major:         dto.Major,
 		Department:    dto.Department,
 		AcademicYear:  dto.AcademicYear,
-		IsActive:      dto.IsActive,
+		Status:        models.LearningGroupStatus(dto.Status),
 	}
 
 	if err := s.DB.Create(&data).Error; err != nil {
@@ -139,8 +139,8 @@ func (s *LearningGroupService) update(id string, dto UpdateDTO) (*models.Learnin
 		data.AcademicYear = *dto.AcademicYear
 	}
 
-	if dto.IsActive != nil {
-		data.IsActive = *dto.IsActive
+	if dto.Status != nil {
+		data.Status = models.LearningGroupStatus(*dto.Status)
 	}
 
 	if dto.Name != nil && data.Name != *dto.Name {

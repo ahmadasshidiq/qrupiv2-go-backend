@@ -19,6 +19,10 @@ import (
 func main() {
 	_ = godotenv.Load()
 	logger := loglib.New("core-service")
+	if err := stores.InitMinio(); err != nil {
+		logger.Error("MinIO startup failed", "error", err)
+		return
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	db, err := stores.OpenPostgres("CORE")
@@ -28,6 +32,10 @@ func main() {
 	}
 	if err := db.AutoMigrate(models.Models...); err != nil {
 		logger.Error("database migration failed", "error", err)
+		return
+	}
+	if err := models.MigrateLegacyStatusColumns(db); err != nil {
+		logger.Error("status migration failed", "error", err)
 		return
 	}
 	if err := migrateInstitutionRegionSnapshot(db); err != nil {

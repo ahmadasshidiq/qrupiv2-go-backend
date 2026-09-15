@@ -12,6 +12,15 @@ type DefaultFindDTO struct {
 	Limit     int    `form:"limit" binding:"omitempty,min=1"`
 	Page      int    `form:"page" binding:"omitempty,min=1"`
 }
+
+type ChartFilterDTO struct {
+	CategoryID      string `form:"category_id" binding:"omitempty,uuid"`
+	Type            string `form:"type" binding:"omitempty,oneof=positive violation"`
+	StartDate       string `form:"start_date" binding:"omitempty,datetime=2006-01-02"`
+	EndDate         string `form:"end_date" binding:"omitempty,datetime=2006-01-02"`
+	LearningGroupID string `form:"learning_group_id" binding:"omitempty,uuid"`
+	TopLimit        int    `form:"top_limit" binding:"omitempty,min=1,max=100"`
+}
 type CreateDTO struct {
 	ActivityItemID  string    `json:"activity_item_id" binding:"required,uuid"`
 	UserID          string    `json:"user_id" binding:"required,uuid"`

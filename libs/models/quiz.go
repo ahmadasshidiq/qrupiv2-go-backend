@@ -13,9 +13,10 @@ import (
 type QuizType string
 
 const (
-	QuizTypeQuiz    QuizType = "quiz"
-	QuizTypeMidterm QuizType = "midterm"
-	QuizTypeFinal   QuizType = "final"
+	QuizTypeHomework QuizType = "homework"
+	QuizTypeQuiz     QuizType = "quiz"
+	QuizTypeMidterm  QuizType = "midterm"
+	QuizTypeFinal    QuizType = "final"
 )
 
 type QuizOption struct {

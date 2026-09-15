@@ -9,6 +9,15 @@ type DefaultFindDTO struct {
 	Page      int    `form:"page" json:"page" binding:"omitempty,min=1"`
 }
 
+type RankingFilterDTO struct {
+	Scope           string `form:"scope" binding:"required,oneof=school class learning_group"`
+	LearningGroupID string `form:"learning_group_id" binding:"omitempty,uuid"`
+	QuizID          string `form:"quiz_id" binding:"omitempty,uuid"`
+	StartDate       string `form:"start_date" binding:"omitempty,datetime=2006-01-02"`
+	EndDate         string `form:"end_date" binding:"omitempty,datetime=2006-01-02"`
+	Limit           int    `form:"limit" binding:"omitempty,min=1,max=100"`
+}
+
 type CheatingLog struct {
 	Timestamp time.Time `json:"timestamp" binding:"required"`
 	Type      string    `json:"type" binding:"required"`    // e.g. "tab-switch", "blur", "focus-lost"

@@ -32,6 +32,7 @@ type Answer struct {
 
 type QuizSession struct {
 	ID            uuid.UUID         `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
+	InstitutionID uuid.UUID         `gorm:"type:uuid;not null;index" json:"institution_id"`
 	QuizID        uuid.UUID         `gorm:"type:uuid;not null;index;uniqueIndex:idx_quiz_session_user,where:deleted_at IS NULL" json:"quiz_id"`
 	UserID        uuid.UUID         `gorm:"type:uuid;not null;index;uniqueIndex:idx_quiz_session_user,where:deleted_at IS NULL" json:"user_id"`
 	StartTime     time.Time         `gorm:"not null" json:"start_time"`

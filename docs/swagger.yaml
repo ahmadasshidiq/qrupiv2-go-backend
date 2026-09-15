@@ -193,6 +193,8 @@ definitions:
     properties:
       description:
         type: string
+      institution_id:
+        type: string
       name:
         maxLength: 255
         minLength: 2
@@ -208,6 +210,17 @@ definitions:
         maxLength: 255
         minLength: 2
         type: string
+    type: object
+  attendance_logs.BulkCreateDTO:
+    properties:
+      attendance_logs:
+        items:
+          $ref: '#/definitions/attendance_logs.CreateDTO'
+        maxItems: 200
+        minItems: 1
+        type: array
+    required:
+    - attendance_logs
     type: object
   attendance_logs.CheckInDTO:
     properties:
@@ -377,20 +390,33 @@ definitions:
     type: object
   auth.StudentScanLoginDTO:
     properties:
-      barcode:
-        maxLength: 255
+      qr_code:
+        maxLength: 1000
         type: string
-      institution_code:
-        maxLength: 100
-        type: string
+    required:
+    - qr_code
+    type: object
+  auth.StudentVerifyPinDTO:
+    properties:
       pin:
         maxLength: 8
         minLength: 4
         type: string
+      qr_code:
+        maxLength: 1000
+        type: string
     required:
-    - barcode
-    - institution_code
     - pin
+    - qr_code
+    type: object
+  clasenna-go-backend_libs_helpers.SuccessResponse:
+    properties:
+      data: {}
+      message:
+        type: string
+      meta: {}
+      status:
+        type: string
     type: object
   export.ColumnDTO:
     properties:
@@ -413,6 +439,10 @@ definitions:
         type: array
       filename:
         type: string
+      filters:
+        items:
+          $ref: '#/definitions/export.FilterDTO'
+        type: array
       limit:
         type: integer
       models:
@@ -421,6 +451,14 @@ definitions:
         type: integer
       title:
         type: string
+    type: object
+  export.FilterDTO:
+    properties:
+      key:
+        type: string
+      operator:
+        type: string
+      value: {}
     type: object
   learning_group_members.CreateDTO:
     properties:
@@ -461,8 +499,6 @@ definitions:
         type: string
       institution_id:
         type: string
-      is_active:
-        type: boolean
       level:
         type: integer
       major:
@@ -471,6 +507,11 @@ definitions:
       name:
         maxLength: 100
         minLength: 2
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
         type: string
       type:
         enum:
@@ -483,6 +524,7 @@ definitions:
     - institution_id
     - level
     - name
+    - status
     - type
     type: object
   learning_groups.UpdateDTO:
@@ -496,8 +538,6 @@ definitions:
         type: string
       institution_id:
         type: string
-      is_active:
-        type: boolean
       level:
         type: integer
       major:
@@ -506,6 +546,11 @@ definitions:
       name:
         maxLength: 100
         minLength: 2
+        type: string
+      status:
+        enum:
+        - active
+        - inactive
         type: string
       type:
         enum:
@@ -862,6 +907,44 @@ paths:
       security:
       - BearerAuth: []
       summary: Create Activities in bulk
+      tags:
+      - Activity API
+  /activities/chart:
+    get:
+      description: Returns activity chart aggregations scoped to the authenticated
+        institution
+      parameters:
+      - description: Activity category ID
+        in: query
+        name: category_id
+        type: string
+      - description: Activity type
+        enum:
+        - positive
+        - violation
+        in: query
+        name: type
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      - description: Learning group ID
+        in: query
+        name: learning_group_id
+        type: string
+      - description: Top student limit (default 10, maximum 100)
+        in: query
+        name: top_limit
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get activity chart data
       tags:
       - Activity API
   /activity-bulk-jobs/{id}:
@@ -1306,6 +1389,23 @@ paths:
       summary: Check out Attendance
       tags:
       - Attendance Log API
+  /attendance-logs/bulk:
+    post:
+      description: Creates up to 200 attendance logs atomically; all records are rolled
+        back when one record is invalid
+      parameters:
+      - description: Bulk Attendance Log Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/attendance_logs.BulkCreateDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Create Attendance Logs in bulk
+      tags:
+      - Attendance Log API
   /attendance-logs/check-in:
     post:
       parameters:
@@ -1371,6 +1471,19 @@ paths:
           $ref: '#/definitions/auth.StudentScanLoginDTO'
       responses: {}
       summary: Login student using barcode and PIN
+      tags:
+      - Auth API
+  /auth/student/verify-pin:
+    post:
+      parameters:
+      - description: Student PIN Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/auth.StudentVerifyPinDTO'
+      responses: {}
+      summary: Verify student PIN after QR scan
       tags:
       - Auth API
   /districts:
@@ -1927,6 +2040,10 @@ paths:
         name: uploaded_user_id
         required: true
         type: string
+      - description: Learning resource file
+        in: formData
+        name: file
+        type: file
       responses: {}
       security:
       - BearerAuth: []
@@ -1992,6 +2109,10 @@ paths:
       - in: formData
         name: uploaded_user_id
         type: string
+      - description: Replacement learning resource file
+        in: formData
+        name: file
+        type: file
       responses: {}
       security:
       - BearerAuth: []
@@ -2163,6 +2284,46 @@ paths:
       security:
       - BearerAuth: []
       summary: Archive Quiz Session
+      tags:
+      - Quiz Session API
+  /quiz-sessions/rankings:
+    get:
+      description: Returns school, class, or learning-group rankings using completed
+        quiz-session scores
+      parameters:
+      - description: Ranking scope
+        enum:
+        - school
+        - class
+        - learning_group
+        in: query
+        name: scope
+        required: true
+        type: string
+      - description: Required for class and learning_group scope
+        in: query
+        name: learning_group_id
+        type: string
+      - description: Quiz ID
+        in: query
+        name: quiz_id
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      - description: Ranking limit (default 50, maximum 100)
+        in: query
+        name: limit
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get student quiz rankings
       tags:
       - Quiz Session API
   /quizzes:
@@ -2477,13 +2638,6 @@ paths:
       - in: formData
         name: institution_id
         type: string
-      - enum:
-        - active
-        - inactive
-        in: formData
-        name: is_active
-        required: true
-        type: string
       - in: formData
         maxLength: 255
         minLength: 2
@@ -2505,6 +2659,13 @@ paths:
         type: string
       - in: formData
         name: role_id
+        required: true
+        type: string
+      - enum:
+        - active
+        - inactive
+        in: formData
+        name: status
         required: true
         type: string
       - enum:
@@ -2576,12 +2737,6 @@ paths:
       - in: formData
         name: institution_id
         type: string
-      - enum:
-        - active
-        - inactive
-        in: formData
-        name: is_active
-        type: string
       - in: formData
         maxLength: 255
         minLength: 2
@@ -2602,6 +2757,12 @@ paths:
         type: string
       - in: formData
         name: role_id
+        type: string
+      - enum:
+        - active
+        - inactive
+        in: formData
+        name: status
         type: string
       - enum:
         - student
@@ -2644,15 +2805,15 @@ paths:
         required: true
         type: string
       produces:
-      - image/png
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            type: file
+            $ref: '#/definitions/clasenna-go-backend_libs_helpers.SuccessResponse'
       security:
       - BearerAuth: []
-      summary: Download student barcode
+      summary: Get student QR code data
       tags:
       - User API
   /users/import-excel:

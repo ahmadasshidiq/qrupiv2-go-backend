@@ -21,11 +21,11 @@ func RegisterUserModule(router *gin.RouterGroup, db *gorm.DB, publishers ...Even
 	{
 		group.GET("", permissions.Handler("users", "get-all"), controller.GetAll)
 		group.GET("/:id", permissions.Handler("users", "get-by-id"), controller.GetByID)
-		group.GET("/:id/barcode", permissions.Handler("users", "get-by-id"), controller.GetBarcode)
+		group.GET("/:id/barcode", permissions.Handler("users", "get-by-id"), controller.GetQRCode)
 		group.POST("", permissions.Handler("users", "create"), controller.Create)
 		group.POST("/import-excel", permissions.Handler("users", "import"), controller.ImportByExcel)
 		group.PUT("/:id", permissions.Handler("users", "update"), controller.Update)
-		group.DELETE("/:id/archived", permissions.Handler("users", "delete"), controller.Archive)
+		group.DELETE("/:id/archived", permissions.Handler("users", "archive"), controller.Archive)
 		group.DELETE("/:id", permissions.Handler("users", "delete"), controller.Delete)
 	}
 }

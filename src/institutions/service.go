@@ -4,6 +4,7 @@ import (
 	"clasenna-go-backend/libs/cryptography"
 	"clasenna-go-backend/libs/helpers"
 	"clasenna-go-backend/libs/models"
+	"clasenna-go-backend/libs/seeder"
 	"clasenna-go-backend/libs/stores"
 	"clasenna-go-backend/src/users"
 	"errors"
@@ -127,6 +128,9 @@ func (s *InstitutionService) create(ctx *gin.Context, dto CreateDTO) (map[string
 		if err := createDefaultKAIHActivities(tx, institution.ID); err != nil {
 			return fmt.Errorf("failed to create default 7 KAIH activities: %w", err)
 		}
+		if err := seeder.SeedAttendanceAbsenceReasonsForInstitution(tx, institution.ID); err != nil {
+			return fmt.Errorf("failed to create default attendance absence reasons: %w", err)
+		}
 
 		if file != nil {
 			publicURL, err := stores.UploadToMinio(
@@ -157,7 +161,7 @@ func (s *InstitutionService) create(ctx *gin.Context, dto CreateDTO) (map[string
 			InstitutionID: institution.ID.String(),
 			ContextType:   "-",
 			ContextCode:   "-",
-			IsActive:      "active",
+			Status:        "active",
 		}
 		user, err := userService.CreateUser(nil, adminDTO)
 		if err != nil {

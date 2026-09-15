@@ -32,10 +32,14 @@ func (s *QuizSessionService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*help
 
 	// filters
 	params["qs.deleted_at.isnull"] = ""
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
+		params["i.id"] = institutionID
+	}
 
 	baseQuery := `
 		select
 			qs.*,
+			qs.score as final_score,
 			q.title as quiz_title,
 			u.name as user_name,
 			i.name as institution_name,
@@ -75,12 +79,6 @@ func (s *QuizSessionService) getByID(id string) (*models.QuizSession, error) {
 }
 
 func (s *QuizSessionService) create(dto CreateDTO) (*models.QuizSession, error) {
-	var count int64
-	s.DB.Model(&models.QuizSession{}).Where("quiz_id = ? and user_id = ?", dto.QuizID, dto.UserID).Count(&count)
-	if count > 0 {
-		return nil, errors.New("quiz session already exists")
-	}
-
 	quizID, err := uuid.Parse(dto.QuizID)
 	if err != nil {
 		return nil, errors.New("invalid quiz_id format")
@@ -90,12 +88,39 @@ func (s *QuizSessionService) create(dto CreateDTO) (*models.QuizSession, error) 
 	if err != nil {
 		return nil, errors.New("invalid created_user_id format")
 	}
+	var quiz models.Quiz
+	if err := s.DB.Select("institution_id").First(&quiz, "id = ?", quizID).Error; err != nil {
+		return nil, err
+	}
 
 	data := models.QuizSession{
-		QuizID:     quizID,
-		UserID:     userID,
-		StartTime:  dto.StartTime,
-		DeviceInfo: dto.DeviceInfo,
+		InstitutionID: quiz.InstitutionID,
+		QuizID:        quizID,
+		UserID:        userID,
+		StartTime:     dto.StartTime,
+		DeviceInfo:    dto.DeviceInfo,
+	}
+
+	var existing models.QuizSession
+	result := s.DB.Where("quiz_id = ? AND user_id = ?", quizID, userID).First(&existing)
+	if result.Error == nil {
+		updates := map[string]interface{}{
+			"institution_id": quiz.InstitutionID,
+			"start_time":     dto.StartTime,
+			"device_info":    dto.DeviceInfo,
+			"status":         models.QuizSessionStatusInProgress,
+			"end_time":       nil,
+		}
+		if err := s.DB.Model(&existing).Updates(updates).Error; err != nil {
+			return nil, err
+		}
+		if err := s.DB.First(&existing, "id = ?", existing.ID).Error; err != nil {
+			return nil, err
+		}
+		return &existing, nil
+	}
+	if !errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, result.Error
 	}
 
 	if err := s.DB.Create(&data).Error; err != nil {

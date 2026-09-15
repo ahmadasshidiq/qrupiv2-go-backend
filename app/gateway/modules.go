@@ -32,6 +32,8 @@ func RegisterAllModules(router *gin.Engine, logger *slog.Logger) {
 			target = helpers.ConfigString("NOTIFICATION_SERVICE_URL", "http://localhost:3004")
 		case strings.HasPrefix(path, "/reports/"):
 			target = helpers.ConfigString("REPORTING_SERVICE_URL", "http://localhost:3005")
+		case strings.HasPrefix(path, "/export/"):
+			target = helpers.ConfigString("REPORTING_SERVICE_URL", "http://localhost:3005")
 		}
 		if !isPublicRoute(c.Request.Method, path) && !authorize(c) {
 			return

@@ -27,7 +27,7 @@ func (s *ActivityService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers
 	params["a.deleted_at.isnull"] = ""
 	base := `select a.id, a.item_id as activity_item_id, a.user_id, a.learning_group_id,
 		a.recorded_user_id, a.description, a.point_value, a.platform, a.occurred_at,
-		a.created_at, a.updated_at, ai.name as activity_item_name,
+		a.created_at, a.updated_at, ai.name as activity_item_name, ai.type as activity_item_type,
 		ac.id as category_id, ac.name as category_name, u.name as user_name,
 		ru.name as recorded_user_name, lg.name as learning_group_name
 		from activities a
@@ -68,6 +68,10 @@ func (s *ActivityService) create(dto CreateDTO) (*models.Activity, error) {
 	if err := s.ensureUser(userID); err != nil {
 		return nil, err
 	}
+	var user models.User
+	if err := s.DB.Select("institution_id").First(&user, "id = ?", userID).Error; err != nil {
+		return nil, err
+	}
 	if err := s.ensureUser(recordedUserID); err != nil {
 		return nil, err
 	}
@@ -75,7 +79,7 @@ func (s *ActivityService) create(dto CreateDTO) (*models.Activity, error) {
 	if err != nil {
 		return nil, err
 	}
-	data := models.Activity{ActivityItemID: itemID, UserID: userID, LearningGroupID: learningGroupID, RecordedUserID: recordedUserID, Description: dto.Description, Platform: dto.Platform, OccurredAt: dto.OccurredAt}
+	data := models.Activity{InstitutionID: user.InstitutionID, ActivityItemID: itemID, UserID: userID, LearningGroupID: learningGroupID, RecordedUserID: recordedUserID, Description: dto.Description, Platform: dto.Platform, OccurredAt: dto.OccurredAt}
 	if err := s.DB.Transaction(func(tx *gorm.DB) error {
 		var lockedItem models.ActivityItem
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&lockedItem, "id = ?", itemID).Error; err != nil {

@@ -35,6 +35,31 @@ func (c *QuizSessionController) GetAll(ctx *gin.Context) {
 	helpers.RespondSuccess(ctx, "quiz-sessions", http.StatusOK, data)
 }
 
+// @Summary Get student quiz rankings
+// @Description Returns school, class, or learning-group rankings using completed quiz-session scores
+// @Tags Quiz Session API
+// @Param scope query string true "Ranking scope" Enums(school, class, learning_group)
+// @Param learning_group_id query string false "Required for class and learning_group scope"
+// @Param quiz_id query string false "Quiz ID"
+// @Param start_date query string false "Start date (YYYY-MM-DD)"
+// @Param end_date query string false "End date (YYYY-MM-DD)"
+// @Param limit query int false "Ranking limit (default 50, maximum 100)"
+// @Security BearerAuth
+// @Router /quiz-sessions/rankings [get]
+func (c *QuizSessionController) GetRankings(ctx *gin.Context) {
+	var dto RankingFilterDTO
+	if err := ctx.ShouldBindQuery(&dto); err != nil {
+		helpers.RespondError(ctx, "quiz-sessions", http.StatusBadRequest, err)
+		return
+	}
+	data, err := c.Service.getRankings(ctx, dto)
+	if err != nil {
+		helpers.RespondError(ctx, "quiz-sessions", http.StatusBadRequest, err)
+		return
+	}
+	helpers.RespondSuccess(ctx, "quiz-sessions", http.StatusOK, data)
+}
+
 // @Summary Get Quiz Session by ID
 // @Tags Quiz Session API
 // @Param id path string true "Quiz Session ID"

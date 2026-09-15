@@ -20,7 +20,7 @@ func RegisterQuizModule(router *gin.RouterGroup, db *gorm.DB) {
 		group.GET("/:id", permissions.Handler("quizzes", "get-by-id"), controller.GetByID)
 		group.POST("", permissions.Handler("quizzes", "create"), controller.Create)
 		group.PUT("/:id", permissions.Handler("quizzes", "update"), controller.Update)
-		group.DELETE("/:id/archived", permissions.Handler("quizzes", "delete"), controller.Archive)
+		group.DELETE("/:id/archived", permissions.Handler("quizzes", "archive"), controller.Archive)
 		group.DELETE("/:id", permissions.Handler("quizzes", "delete"), controller.Delete)
 	}
 }

@@ -38,6 +38,10 @@ func main() {
 		logger.Error("database migration failed", "error", err)
 		return
 	}
+	if err := db.Exec(`UPDATE activities a SET institution_id = u.institution_id FROM users u WHERE a.user_id = u.id AND a.institution_id IS NULL`).Error; err != nil {
+		logger.Error("activity institution backfill failed", "error", err)
+		return
+	}
 	brokers := helpers.ConfigStrings("KAFKA_BROKERS", "localhost:9092")
 	eventsTopic := helpers.ConfigString("KAFKA_EVENTS_TOPIC", "qrupi.events")
 	dlqTopic := helpers.ConfigString("KAFKA_DLQ_TOPIC", "qrupi.events.dlq")

@@ -16,7 +16,7 @@ type CreateDTO struct {
 	Major         string `json:"major" binding:"omitempty,max=100"`
 	Department    string `json:"department" binding:"omitempty,max=100"`
 	AcademicYear  string `json:"academic_year" binding:"omitempty,len=9"`
-	IsActive      bool   `json:"is_active" binding:"omitempty"`
+	Status        string `json:"status" binding:"required,oneof=active inactive"`
 }
 
 type UpdateDTO struct {
@@ -28,5 +28,5 @@ type UpdateDTO struct {
 	Major         *string `json:"major" binding:"omitempty,max=100"`
 	Department    *string `json:"department" binding:"omitempty,max=100"`
 	AcademicYear  *string `json:"academic_year" binding:"omitempty,len=9"`
-	IsActive      *bool   `json:"is_active" binding:"omitempty"`
+	Status        *string `json:"status" binding:"omitempty,oneof=active inactive"`
 }

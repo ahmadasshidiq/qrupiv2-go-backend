@@ -25,6 +25,7 @@ const (
 type AttendanceLog struct {
 	ID               uuid.UUID        `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	UserID           uuid.UUID        `gorm:"type:uuid;not null;index;index:idx_attendance_context_checkin,priority:1" json:"user_id"`
+	RecordedUserID   *uuid.UUID       `gorm:"type:uuid;index" json:"recorded_user_id,omitempty"`
 	LearningGroupID  *uuid.UUID       `gorm:"type:uuid;index;index:idx_attendance_context_checkin,priority:3" json:"learning_group_id,omitempty"`
 	AbsenceReasonID  *uuid.UUID       `gorm:"type:uuid;index" json:"absence_reason_id,omitempty"`
 	AbsenceNote      string           `gorm:"type:text" json:"absence_note"`
@@ -42,6 +43,7 @@ type AttendanceLog struct {
 	DeletedAt        gorm.DeletedAt   `gorm:"index" json:"-"`
 
 	User          *User                    `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"user,omitempty"`
+	RecordedUser  *User                    `gorm:"foreignKey:RecordedUserID;constraint:OnDelete:RESTRICT" json:"recorded_user,omitempty"`
 	LearningGroup *LearningGroup           `gorm:"foreignKey:LearningGroupID;constraint:OnDelete:SET NULL" json:"learning_group,omitempty"`
 	AbsenceReason *AttendanceAbsenceReason `gorm:"foreignKey:AbsenceReasonID;constraint:OnDelete:SET NULL" json:"absence_reason,omitempty"`
 }

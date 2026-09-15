@@ -10,6 +10,12 @@ type ColumnDTO struct {
 	Alias      *string `json:"alias,omitempty"`
 }
 
+type FilterDTO struct {
+	Key      string `json:"key"`
+	Operator string `json:"operator,omitempty"`
+	Value    any    `json:"value"`
+}
+
 type ExportDTO struct {
 	Title    string      `json:"title"`
 	Filename string      `json:"filename"`
@@ -17,6 +23,7 @@ type ExportDTO struct {
 	PageSize int         `json:"pageSize"`
 	Limit    int         `json:"limit"`
 	Columns  []ColumnDTO `json:"column"`
+	Filters  []FilterDTO `json:"filters,omitempty"`
 }
 
 type ExportQCSectionDTO struct {

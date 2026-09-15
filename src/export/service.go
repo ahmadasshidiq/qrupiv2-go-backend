@@ -15,14 +15,41 @@ type ExportService struct {
 	DB *gorm.DB
 }
 
+var allowedModels = map[string]bool{
+	"users": true, "learning_groups": true, "learning_group_members": true,
+	"learning_resources": true, "quizzes": true, "quiz_sessions": true,
+	"attendance_logs": true, "attendance_absence_reasons": true,
+	"activity_categories": true, "activity_items": true, "activities": true,
+	"institutions": true, "roles": true,
+}
+
+var institutionScopedModels = map[string]bool{
+	"users": true, "learning_groups": true, "learning_group_members": true,
+	"learning_resources": true, "quizzes": true, "quiz_sessions": true,
+	"attendance_logs": true, "attendance_absence_reasons": true,
+	"activity_categories": true, "activity_items": true, "activities": true,
+}
+
 func NewExportService(db *gorm.DB) *ExportService {
 	return &ExportService{DB: db}
 }
 
-func (s *ExportService) buildQuery(dto ExportDTO) string {
+func (s *ExportService) buildQuery(dto ExportDTO, filters []FilterDTO) (string, []interface{}) {
 	baseTable := dto.Models
 	selects := []string{}
 	joins := map[string]string{}
+	if baseTable == "learning_resources" {
+		joins["uploaded_user"] = "join users uploaded_user on uploaded_user.id = learning_resources.uploaded_user_id"
+	}
+	if baseTable == "attendance_logs" {
+		joins["attendance_user"] = "join users attendance_user on attendance_user.id = attendance_logs.user_id"
+	}
+	if baseTable == "activities" {
+		joins["activity_user"] = "join users activity_user on activity_user.id = activities.user_id"
+	}
+	if baseTable == "quiz_sessions" {
+		joins["session_quiz"] = "join quizzes session_quiz on session_quiz.id = quiz_sessions.quiz_id"
+	}
 
 	for _, col := range dto.Columns {
 		parts := strings.Split(col.Key, ".")
@@ -92,11 +119,47 @@ func (s *ExportService) buildQuery(dto ExportDTO) string {
 		query += " " + join
 	}
 
+	conditions := []string{}
+	args := []interface{}{}
+	allowedOperators := map[string]bool{"=": true, "!=": true, "like": true, "in": true}
+	allowedKeys := map[string]bool{"id": true, "institution_id": true, "user_id": true, "role_id": true, "learning_group_id": true, "activity_item_id": true, "recorded_user_id": true, "quiz_id": true, "name": true, "code": true, "email": true, "type": true, "phone": true, "context_type": true, "context_code": true, "status": true, "barcode": true, "avatar_url": true, "level": true, "major": true, "department": true, "academic_year": true, "title": true, "description": true, "point_value": true, "platform": true, "occurred_at": true, "created_at": true, "updated_at": true, "deleted_at": true}
+	for _, filter := range filters {
+		if !allowedKeys[filter.Key] {
+			continue
+		}
+		operator := strings.ToLower(filter.Operator)
+		if operator == "" {
+			operator = "="
+		}
+		filterTable := baseTable
+		if baseTable == "learning_resources" && filter.Key == "institution_id" {
+			filterTable = "uploaded_user"
+		}
+		if baseTable == "quiz_sessions" && filter.Key == "institution_id" {
+			filterTable = "session_quiz"
+		}
+		if baseTable == "attendance_logs" && filter.Key == "institution_id" {
+			filterTable = "attendance_user"
+		}
+		if operator == "is null" {
+			conditions = append(conditions, fmt.Sprintf("%s.%s is null", filterTable, filter.Key))
+			continue
+		}
+		if !allowedOperators[operator] {
+			continue
+		}
+		conditions = append(conditions, fmt.Sprintf("%s.%s %s ?", filterTable, filter.Key, operator))
+		args = append(args, filter.Value)
+	}
+	if len(conditions) > 0 {
+		query += " where " + strings.Join(conditions, " and ")
+	}
+
 	if dto.Limit > 0 {
 		query += fmt.Sprintf(" limit %d", dto.Limit)
 	}
 
-	return query
+	return query, args
 }
 
 func (s *ExportService) generateExcel(dto ExportDTO, data []map[string]interface{}) (string, error) {
@@ -191,10 +254,10 @@ func (s *ExportService) generateExcel(dto ExportDTO, data []map[string]interface
 	return filePath, nil
 }
 
-func (s *ExportService) exportToMap(req ExportDTO) ([]map[string]interface{}, error) {
-	query := s.buildQuery(req)
+func (s *ExportService) exportToMap(req ExportDTO, filters []FilterDTO) ([]map[string]interface{}, error) {
+	query, args := s.buildQuery(req, filters)
 
-	rows, err := s.DB.Raw(query).Rows()
+	rows, err := s.DB.Raw(query, args...).Rows()
 	if err != nil {
 		return nil, err
 	}

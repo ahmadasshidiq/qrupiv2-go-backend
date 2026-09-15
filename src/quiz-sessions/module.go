@@ -17,10 +17,11 @@ func RegisterQuizSessionModule(router *gin.RouterGroup, db *gorm.DB) {
 	group.Use(cryptography.JWTMiddleware(db))
 	{
 		group.GET("", permissions.Handler("quiz-sessions", "get-all"), controller.GetAll)
+		group.GET("/rankings", permissions.Handler("quiz-sessions", "get-all"), controller.GetRankings)
 		group.GET("/:id", permissions.Handler("quiz-sessions", "get-by-id"), controller.GetByID)
 		group.POST("", permissions.Handler("quiz-sessions", "create"), controller.Create)
 		group.PUT("/:id", permissions.Handler("quiz-sessions", "update"), controller.Update)
-		group.DELETE("/:id/archived", permissions.Handler("quiz-sessions", "delete"), controller.Archive)
+		group.DELETE("/:id/archived", permissions.Handler("quiz-sessions", "archive"), controller.Archive)
 		group.DELETE("/:id", permissions.Handler("quiz-sessions", "delete"), controller.Delete)
 	}
 }

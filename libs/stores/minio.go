@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/disintegration/imaging"
 	"github.com/google/uuid"
@@ -25,32 +26,53 @@ import (
 var MinioClient *minio.Client
 var MinioPublicURL string
 
-// InitMinio: dipanggil sekali di main.go
-func InitMinio() {
+// InitMinio initializes the shared client and verifies that MinIO is reachable.
+func InitMinio() error {
 	_ = godotenv.Load()
 
 	endpoint := os.Getenv("MINIO_ENDPOINT")
 	accessKey := os.Getenv("MINIO_ACCESS_KEY")
 	secretKey := os.Getenv("MINIO_SECRET_KEY")
+	bucketName := os.Getenv("MINIO_PRODUCT_BUCKET")
 	secureStr := os.Getenv("MINIO_SECURE")
 	MinioPublicURL = os.Getenv("MINIO_PUBLIC_URL")
+	if endpoint == "" || accessKey == "" || secretKey == "" || bucketName == "" || MinioPublicURL == "" {
+		return fmt.Errorf("MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_PRODUCT_BUCKET, and MINIO_PUBLIC_URL must be configured")
+	}
 
-	secure, _ := strconv.ParseBool(secureStr)
+	secure, err := strconv.ParseBool(secureStr)
+	if err != nil {
+		return fmt.Errorf("invalid MINIO_SECURE value %q: %w", secureStr, err)
+	}
 
-	client, err := minio.New(fmt.Sprintf("%s", endpoint), &minio.Options{
+	client, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: secure,
 	})
 	if err != nil {
-		log.Fatalf("❌ Gagal konek ke MinIO: %v", err)
+		return fmt.Errorf("create MinIO client: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if _, err := client.BucketExists(ctx, bucketName); err != nil {
+		return fmt.Errorf("connect to MinIO endpoint %q: %w", endpoint, err)
 	}
 
 	MinioClient = client
 	log.Println("✅ MinIO terhubung ke:", endpoint)
+	return nil
 }
 
 // UploadToMinio: upload ke bucket tertentu
 func UploadToMinio(file multipart.File, bucketName string, folderName string, filename string, contentType string, size int64) (string, error) {
+	if MinioClient == nil {
+		return "", fmt.Errorf("MinIO client belum diinisialisasi")
+	}
+	if bucketName == "" {
+		return "", fmt.Errorf("nama bucket MinIO kosong")
+	}
+
 	ctx := context.Background()
 
 	// Pastikan bucket ada

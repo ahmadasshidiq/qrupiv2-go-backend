@@ -64,21 +64,20 @@ func (c *UserController) GetByID(ctx *gin.Context) {
 	helpers.RespondSuccess(ctx, "users", http.StatusOK, data)
 }
 
-// @Summary      Download student barcode
+// @Summary      Get student QR code data
 // @Tags         User API
-// @Produce      image/png
+// @Produce      json
 // @Param        id  path  string  true  "Student user ID"
-// @Success      200  {file}  binary
+// @Success      200  {object}  helpers.SuccessResponse
 // @Security     BearerAuth
 // @Router       /users/{id}/barcode [get]
-func (c *UserController) GetBarcode(ctx *gin.Context) {
-	data, err := c.Service.generateBarcodeImage(ctx, ctx.Param("id"))
+func (c *UserController) GetQRCode(ctx *gin.Context) {
+	qrCode, err := c.Service.getQRCode(ctx, ctx.Param("id"))
 	if err != nil {
 		helpers.RespondError(ctx, "users", http.StatusNotFound, err)
 		return
 	}
-	ctx.Header("Content-Disposition", "inline; filename=student-barcode.png")
-	ctx.Data(http.StatusOK, "image/png", data)
+	helpers.RespondSuccess(ctx, "users", http.StatusOK, gin.H{"qr_code": qrCode})
 }
 
 // @Summary      Create User

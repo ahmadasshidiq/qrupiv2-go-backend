@@ -28,6 +28,10 @@ func main() {
 		logger.Error("database migration failed", "error", err)
 		return
 	}
+	if err := models.MigrateLegacyStatusColumns(db); err != nil {
+		logger.Error("status migration failed", "error", err)
+		return
+	}
 	brokers := helpers.ConfigStrings("KAFKA_BROKERS", "localhost:9092")
 	eventsTopic := helpers.ConfigString("KAFKA_EVENTS_TOPIC", "qrupi.events")
 	dlqTopic := helpers.ConfigString("KAFKA_DLQ_TOPIC", "qrupi.events.dlq")

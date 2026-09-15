@@ -7,6 +7,7 @@ import (
 	"time"
 
 	kafkalib "clasenna-go-backend/libs/kafka"
+	"clasenna-go-backend/src/export"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -21,6 +22,7 @@ type StudentReadModel struct {
 }
 
 func RegisterAllModules(router *gin.RouterGroup, db *gorm.DB) {
+	export.RegisterExportModule(router, db)
 	reports := router.Group("/reports")
 	reports.GET("/students", func(c *gin.Context) {
 		var rows []StudentReadModel

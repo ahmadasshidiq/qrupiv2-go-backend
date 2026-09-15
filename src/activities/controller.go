@@ -33,6 +33,31 @@ func (c *ActivityController) GetAll(x *gin.Context) {
 	helpers.RespondSuccess(x, "activities", 200, v)
 }
 
+// @Summary      Get activity chart data
+// @Description  Returns activity chart aggregations scoped to the authenticated institution
+// @Tags         Activity API
+// @Param        category_id       query  string  false  "Activity category ID"
+// @Param        type              query  string  false  "Activity type" Enums(positive, violation)
+// @Param        start_date        query  string  false  "Start date (YYYY-MM-DD)"
+// @Param        end_date          query  string  false  "End date (YYYY-MM-DD)"
+// @Param        learning_group_id query  string  false  "Learning group ID"
+// @Param        top_limit         query  int     false  "Top student limit (default 10, maximum 100)"
+// @Security     BearerAuth
+// @Router       /activities/chart [get]
+func (c *ActivityController) GetChart(x *gin.Context) {
+	var dto ChartFilterDTO
+	if err := x.ShouldBindQuery(&dto); err != nil {
+		helpers.RespondError(x, "activities", http.StatusBadRequest, err)
+		return
+	}
+	result, err := c.Service.getChart(x, dto)
+	if err != nil {
+		helpers.RespondError(x, "activities", http.StatusBadRequest, err)
+		return
+	}
+	helpers.RespondSuccess(x, "activities", http.StatusOK, result)
+}
+
 // @Summary      Get Activity by ID
 // @Tags         Activity API
 // @Param        id  path  string  true  "Activity ID"

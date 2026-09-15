@@ -15,9 +15,12 @@ type LoginDTO struct {
 }
 
 type StudentScanLoginDTO struct {
-	InstitutionCode string `json:"institution_code" binding:"required,max=100"`
-	Barcode         string `json:"barcode" binding:"required,max=255"`
-	Pin             string `json:"pin" binding:"required,numeric,min=4,max=8"`
+	QRCode string `json:"qr_code" binding:"required,max=1000"`
+}
+
+type StudentVerifyPinDTO struct {
+	QRCode string `json:"qr_code" binding:"required,max=1000"`
+	Pin    string `json:"pin" binding:"required,numeric,min=4,max=8"`
 }
 
 type ResetPasswordDTO struct {

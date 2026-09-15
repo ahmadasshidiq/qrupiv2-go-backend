@@ -15,6 +15,6 @@ func RegisterAttendanceAbsenceReasonModule(router *gin.RouterGroup, db *gorm.DB)
 	group.GET("/:id", permissions.Handler("attendance-absence-reasons", "get-by-id"), controller.GetByID)
 	group.POST("", permissions.Handler("attendance-absence-reasons", "create"), controller.Create)
 	group.PUT("/:id", permissions.Handler("attendance-absence-reasons", "update"), controller.Update)
-	group.DELETE("/:id/archived", permissions.Handler("attendance-absence-reasons", "delete"), controller.Archive)
+	group.DELETE("/:id/archived", permissions.Handler("attendance-absence-reasons", "archive"), controller.Archive)
 	group.DELETE("/:id", permissions.Handler("attendance-absence-reasons", "delete"), controller.Delete)
 }

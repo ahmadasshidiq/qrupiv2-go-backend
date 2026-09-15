@@ -26,8 +26,9 @@ type LearningResource struct {
 	UpdatedAt      time.Time            `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt      gorm.DeletedAt       `gorm:"index" json:"-"`
 
-	LearningGroups []LearningGroup `gorm:"many2many:learning_resource_groups;constraint:OnDelete:CASCADE" json:"learning_groups,omitempty"`
-	UploadedUser   *User           `gorm:"foreignKey:UploadedUserID;constraint:OnDelete:CASCADE" json:"uploaded_user,omitempty"`
+	LearningGroupIDs []uuid.UUID     `gorm:"-" json:"learning_group_ids"`
+	LearningGroups   []LearningGroup `gorm:"many2many:learning_resource_groups;constraint:OnDelete:CASCADE" json:"learning_groups,omitempty"`
+	UploadedUser     *User           `gorm:"foreignKey:UploadedUserID;constraint:OnDelete:CASCADE" json:"uploaded_user,omitempty"`
 }
 
 type LearningResourceGroup struct {

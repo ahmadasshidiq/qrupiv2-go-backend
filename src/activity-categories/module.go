@@ -15,6 +15,6 @@ func RegisterActivityCategoryModule(router *gin.RouterGroup, db *gorm.DB) {
 	g.GET("/:id", p.Handler("activity-categories", "get-by-id"), c.GetByID)
 	g.POST("", p.Handler("activity-categories", "create"), c.Create)
 	g.PUT("/:id", p.Handler("activity-categories", "update"), c.Update)
-	g.DELETE("/:id/archived", p.Handler("activity-categories", "delete"), c.Archive)
+	g.DELETE("/:id/archived", p.Handler("activity-categories", "archive"), c.Archive)
 	g.DELETE("/:id", p.Handler("activity-categories", "delete"), c.Delete)
 }

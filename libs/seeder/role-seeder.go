@@ -92,7 +92,7 @@ func SeedSuperAdminUser(DB *gorm.DB) error {
 		Salt:     salt,
 		LayerOne: string(layerOneStr),
 		LayerTwo: layerTwo,
-		IsActive: models.UserStatusActive,
+		Status:   models.UserStatusActive,
 	}
 
 	if err := DB.Create(&user).Error; err != nil {
@@ -107,6 +107,7 @@ func RunSeeders(DB *gorm.DB) {
 	seeders := []func(*gorm.DB) error{
 		SeedRoles,
 		SeedSuperAdminUser,
+		SeedAttendanceAbsenceReasons,
 	}
 
 	for _, seed := range seeders {

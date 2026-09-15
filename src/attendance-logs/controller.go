@@ -2,6 +2,7 @@ package attendance_logs
 
 import (
 	"clasenna-go-backend/libs/helpers"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -70,6 +71,31 @@ func (c *AttendanceLogController) Create(ctx *gin.Context) {
 		return
 	}
 	helpers.RespondSuccess(ctx, "attendance-logs", http.StatusCreated, data.ID)
+}
+
+// @Summary Create Attendance Logs in bulk
+// @Description Creates up to 200 attendance logs atomically; all records are rolled back when one record is invalid
+// @Tags Attendance Log API
+// @Param dto body BulkCreateDTO true "Bulk Attendance Log Data"
+// @Security BearerAuth
+// @Router /attendance-logs/bulk [post]
+func (c *AttendanceLogController) CreateBulk(ctx *gin.Context) {
+	var dto BulkCreateDTO
+	if err := ctx.ShouldBindJSON(&dto); err != nil {
+		helpers.RespondError(ctx, "attendance-logs", http.StatusBadRequest, err)
+		return
+	}
+	result, err := c.Service.createBulk(ctx, dto)
+	if err != nil {
+		var validationError *BulkValidationError
+		if errors.As(err, &validationError) {
+			helpers.RespondErrorData(ctx, "attendance-logs", http.StatusBadRequest, validationError, err)
+			return
+		}
+		helpers.RespondError(ctx, "attendance-logs", http.StatusInternalServerError, err)
+		return
+	}
+	helpers.RespondSuccess(ctx, "attendance-logs", http.StatusCreated, result)
 }
 
 // @Summary Check in Attendance

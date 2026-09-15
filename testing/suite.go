@@ -59,7 +59,7 @@ func runSuite(r *Runner) {
 	} else {
 		user := r.Form("User - insert", http.MethodPost, "/users", form(map[string]string{
 			"name": "API Test Student", "email": "student-" + runID + "@example.test", "password": "Test12345",
-			"pin": "1234", "type": "student", "role_id": roleID, "institution_id": institutionID, "is_active": "active",
+			"pin": "1234", "type": "student", "role_id": roleID, "institution_id": institutionID, "status": "active",
 		}), http.StatusCreated)
 		userID = dataString(user)
 	}
@@ -111,7 +111,7 @@ func createRegionalLearningGroups(r *Runner, runID, institutionID string) []stri
 			name := fmt.Sprintf("API Test Kelas %d - %s %s", level, subject, runID)
 			response := r.JSON("Learning group - insert "+name, http.MethodPost, "/learning-groups", map[string]any{
 				"name": name, "institution_id": institutionID, "code": fmt.Sprintf("T-%s-%d-%s", runID, level, subject),
-				"type": "school-class", "level": level, "department": subject, "academic_year": "2026/2027", "is_active": true,
+				"type": "school-class", "level": level, "department": subject, "academic_year": "2026/2027", "status": "active",
 			}, http.StatusCreated)
 			if id := dataString(response); id != "" {
 				ids = append(ids, id)

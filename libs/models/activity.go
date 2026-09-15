@@ -9,6 +9,7 @@ import (
 
 type Activity struct {
 	ID              uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
+	InstitutionID   *uuid.UUID     `gorm:"type:uuid;index" json:"institution_id,omitempty"`
 	ActivityItemID  uuid.UUID      `gorm:"column:item_id;type:uuid;not null;index" json:"activity_item_id"`
 	UserID          uuid.UUID      `gorm:"type:uuid;not null;index" json:"user_id"`
 	LearningGroupID *uuid.UUID     `gorm:"type:uuid;index" json:"learning_group_id,omitempty"`

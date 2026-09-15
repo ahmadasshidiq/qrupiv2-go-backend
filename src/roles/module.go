@@ -23,7 +23,7 @@ func RegisterRoleModule(router *gin.RouterGroup, db *gorm.DB) {
 		group.GET("/:id", permissions.Handler("roles", "get-by-id"), controller.GetByID)
 		group.POST("", permissions.Handler("roles", "create"), controller.Create)
 		group.PUT("/:id", permissions.Handler("roles", "update"), controller.Update)
-		group.DELETE("/:id/archived", permissions.Handler("roles", "delete"), controller.Archive)
+		group.DELETE("/:id/archived", permissions.Handler("roles", "archive"), controller.Archive)
 		group.DELETE("/:id", permissions.Handler("roles", "delete"), controller.Delete)
 	}
 }

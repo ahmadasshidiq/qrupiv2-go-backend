@@ -24,7 +24,7 @@ type User struct {
 	Phone         string         `gorm:"type:varchar(20)" json:"phone"`
 	ContextType   string         `gorm:"type:varchar(50)" json:"context_type"`
 	ContextCode   string         `gorm:"type:varchar(100)" json:"context_code"`
-	IsActive      UserStatus     `gorm:"type:varchar(20);default:'active'" json:"is_active"`
+	Status        UserStatus     `gorm:"type:varchar(20);default:'active'" json:"status"`
 	Password      string         `gorm:"type:text;not null" json:"-"`
 	PinHash       string         `gorm:"type:text" json:"-"`
 	Barcode       string         `gorm:"type:varchar(255);uniqueIndex:idx_users_barcode,where:barcode <> ''" json:"barcode,omitempty"`

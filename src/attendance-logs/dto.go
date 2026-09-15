@@ -2,6 +2,8 @@ package attendance_logs
 
 import "time"
 
+const MaxBulkAttendanceLogs = 200
+
 type DefaultFindDTO struct {
 	SortBy    string `form:"sortBy" binding:"omitempty"`
 	SortOrder string `form:"sortOrder" binding:"omitempty,oneof=asc desc"`
@@ -23,6 +25,15 @@ type CreateDTO struct {
 	CheckOutAt       *time.Time `json:"check_out_at"`
 	CheckOutLat      *float64   `json:"check_out_lat" binding:"omitempty,latitude"`
 	CheckOutLong     *float64   `json:"check_out_long" binding:"omitempty,longitude"`
+}
+
+type BulkCreateDTO struct {
+	AttendanceLogs []CreateDTO `json:"attendance_logs" binding:"required,min=1,max=200,dive"`
+}
+
+type BulkCreateResult struct {
+	Count int      `json:"count"`
+	IDs   []string `json:"ids"`
 }
 
 type UpdateDTO struct {

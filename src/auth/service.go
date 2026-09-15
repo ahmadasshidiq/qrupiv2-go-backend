@@ -59,7 +59,7 @@ func (s *AuthService) Register(ctx context.Context, dto RegisterDTO, correlation
 		}
 
 		userService := users.UserService{DB: tx}
-		createdUser, err := userService.CreateUser(nil, users.CreateDTO{Name: dto.Name, Email: dto.Email, Password: dto.Password, Type: "admin", RoleID: os.Getenv("SEED_ROLE_ID_ADMIN"), InstitutionID: institution.ID.String(), ContextType: "-", ContextCode: "-", IsActive: "active"})
+		createdUser, err := userService.CreateUser(nil, users.CreateDTO{Name: dto.Name, Email: dto.Email, Password: dto.Password, Type: "admin", RoleID: os.Getenv("SEED_ROLE_ID_ADMIN"), InstitutionID: institution.ID.String(), ContextType: "-", ContextCode: "-", Status: "active"})
 		if err != nil {
 			return fmt.Errorf("failed to create institution admin: %w", err)
 		}
@@ -82,21 +82,51 @@ func (s *AuthService) Register(ctx context.Context, dto RegisterDTO, correlation
 }
 
 func (s *AuthService) StudentScanLogin(ctx context.Context, dto StudentScanLoginDTO, correlationID string) (map[string]interface{}, error) {
+	qr, err := parseStudentQR(dto.QRCode)
+	if err != nil {
+		return nil, err
+	}
 	var data models.User
-	err := s.DB.WithContext(ctx).
-		Joins("JOIN institutions ON institutions.id = users.institution_id").
-		Where("LOWER(institutions.code) = LOWER(?) AND users.barcode = ? AND (users.type = ? OR users.context_type = ?)", dto.InstitutionCode, dto.Barcode, "student", "student").
+	query := s.DB.WithContext(ctx).Joins("JOIN institutions ON institutions.id = users.institution_id").Where("users.barcode = ? AND users.type = ?", qr.Barcode, "student")
+	if qr.InstitutionCode != "" {
+		query = query.Where("LOWER(institutions.code) = LOWER(?)", qr.InstitutionCode)
+	}
+	err = query.
 		Preload("Role").Preload("Institution").First(&data).Error
-	if err != nil || data.PinHash == "" {
+	if err != nil {
 		return nil, errors.New("invalid institution, barcode, or pin")
 	}
-	if data.IsActive != models.UserStatusActive {
-		return nil, errors.New("student account is inactive")
+	return map[string]interface{}{"student_id": data.ID, "name": data.Name, "avatar_profile_url": data.AvatarURL, "requires_pin": true}, nil
+}
+
+type studentQR struct {
+	InstitutionCode string `json:"institution_code"`
+	Barcode         string `json:"barcode"`
+}
+
+func parseStudentQR(value string) (studentQR, error) {
+	var qr studentQR
+	if err := json.Unmarshal([]byte(value), &qr); err == nil && qr.Barcode != "" {
+		return qr, nil
 	}
-	if data.Institution == nil || data.Institution.Status != models.InstitutionStatusActive {
-		return nil, errors.New("institution is inactive")
+	if value != "" {
+		return studentQR{Barcode: value}, nil
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(data.PinHash), []byte(dto.Pin)); err != nil {
+	return qr, errors.New("invalid QR code")
+}
+
+func (s *AuthService) StudentVerifyPin(ctx context.Context, dto StudentVerifyPinDTO, correlationID string) (map[string]interface{}, error) {
+	qr, err := parseStudentQR(dto.QRCode)
+	if err != nil {
+		return nil, err
+	}
+	var data models.User
+	query := s.DB.WithContext(ctx).Joins("JOIN institutions ON institutions.id = users.institution_id").Where("users.barcode = ? AND users.type = ?", qr.Barcode, "student")
+	if qr.InstitutionCode != "" {
+		query = query.Where("LOWER(institutions.code) = LOWER(?)", qr.InstitutionCode)
+	}
+	err = query.Preload("Role").Preload("Institution").First(&data).Error
+	if err != nil || data.PinHash == "" || data.Status != models.UserStatusActive || data.Institution == nil || data.Institution.Status != models.InstitutionStatusActive || bcrypt.CompareHashAndPassword([]byte(data.PinHash), []byte(dto.Pin)) != nil {
 		return nil, errors.New("invalid institution, barcode, or pin")
 	}
 
@@ -174,6 +204,7 @@ func (s *AuthService) Login(ctx context.Context, dto LoginDTO, correlationID str
 		"name":               data.Name,
 		"email":              data.Email,
 		"role":               data.RoleID,
+		"type":               data.Type,
 		"avatar_profile_url": data.AvatarURL,
 		"institution":        data.Institution,
 		"token":              token,

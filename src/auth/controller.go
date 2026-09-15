@@ -84,6 +84,24 @@ func (c *AuthController) StudentScanLogin(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, res)
 }
 
+// @Summary      Verify student PIN after QR scan
+// @Tags         Auth API
+// @Param        dto  body  StudentVerifyPinDTO  true  "Student PIN Data"
+// @Router       /auth/student/verify-pin [post]
+func (c *AuthController) StudentVerifyPin(ctx *gin.Context) {
+	var dto StudentVerifyPinDTO
+	if err := ctx.ShouldBindJSON(&dto); err != nil {
+		ctx.JSON(http.StatusBadRequest, helpers.FormatResponse(ctx.Request.Method, "student-verify-pin", http.StatusBadRequest, nil, nil, err))
+		return
+	}
+	data, err := c.service.StudentVerifyPin(ctx.Request.Context(), dto, ctx.GetString("correlation_id"))
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, helpers.FormatResponse(ctx.Request.Method, "student-verify-pin", http.StatusUnauthorized, nil, nil, err))
+		return
+	}
+	ctx.JSON(http.StatusOK, helpers.FormatResponse(ctx.Request.Method, "student-verify-pin", http.StatusOK, data, nil, nil))
+}
+
 // @Summary      Reset password user
 // @Tags         Auth API
 // @Param        dto  body  ResetPasswordDTO  true  "Reset Password Data"
