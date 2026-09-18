@@ -18,7 +18,7 @@ type QuizQuestion struct {
 	QuestionText  string       `json:"question_text" binding:"required"`
 	Options       []QuizOption `json:"options" binding:"required,dive"`
 	CorrectAnswer string       `json:"correct_answer" binding:"required"`
-	Type          string       `json:"type" binding:"required,oneof=multiple_choice essay true_false"`
+	Type          string       `json:"type" binding:"required,oneof=multiple_choice essay true_false fill_blank"`
 	Points        int          `json:"points" binding:"required,gte=1"`
 }
 
