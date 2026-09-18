@@ -21,6 +21,10 @@ type PaginatedResult struct {
 	Meta PaginatedMeta            `json:"meta"`
 }
 
+// UnlimitedLimit is the query limit value used by list endpoints to request
+// all matching records.
+const UnlimitedLimit = 999
+
 func BuildPaginatedQuery(
 	ctx context.Context,
 	DB *gorm.DB,
@@ -70,13 +74,18 @@ func BuildPaginatedQuery(
 	}
 
 	// base query definition
+	pageClause := fmt.Sprintf("limit %d offset %d", limit, offset)
+	if limit == UnlimitedLimit {
+		pageClause = ""
+	}
+
 	stmtQuery := fmt.Sprintf(`
 		select * from (
 		  %s
 		) as row_data
 		order by %s %s
-		limit %d offset %d
-	`, stmtQueryBase, sortBy, sortOrder, limit, offset)
+		%s
+	`, stmtQueryBase, sortBy, sortOrder, pageClause)
 
 	stmtQueryCount := fmt.Sprintf(`
 		select count(*) as total_row from (

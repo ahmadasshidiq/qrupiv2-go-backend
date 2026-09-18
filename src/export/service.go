@@ -155,7 +155,7 @@ func (s *ExportService) buildQuery(dto ExportDTO, filters []FilterDTO) (string, 
 		query += " where " + strings.Join(conditions, " and ")
 	}
 
-	if dto.Limit > 0 {
+	if dto.Limit > 0 && dto.Limit != helpers.UnlimitedLimit {
 		query += fmt.Sprintf(" limit %d", dto.Limit)
 	}
 
