@@ -2027,9 +2027,8 @@ paths:
         required: true
         type: string
       - enum:
-        - file
-        - video
-        - link
+        - media
+        - interactive-media
         in: formData
         name: type
         type: string
@@ -2094,9 +2093,8 @@ paths:
         name: title
         type: string
       - enum:
-        - file
-        - video
-        - link
+        - media
+        - interactive-media
         in: formData
         name: type
         type: string

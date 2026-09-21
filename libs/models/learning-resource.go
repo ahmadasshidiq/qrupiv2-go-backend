@@ -10,13 +10,6 @@ import (
 
 type LearningResourceType string
 
-const (
-	LearningResourceTypeFile             LearningResourceType = "file"
-	LearningResourceTypeVideo            LearningResourceType = "video"
-	LearningResourceTypeLink             LearningResourceType = "link"
-	LearningResourceTypeInteractiveMedia LearningResourceType = "interactive-media"
-)
-
 type LearningResource struct {
 	ID             uuid.UUID            `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	Title          string               `gorm:"type:varchar(200);not null" json:"title"`
