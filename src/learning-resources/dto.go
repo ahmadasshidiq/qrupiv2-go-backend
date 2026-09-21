@@ -18,6 +18,7 @@ type CreateDTO struct {
 
 type UpdateDTO struct {
 	LearningGroupIDs []string  `form:"learning_group_ids" json:"learning_group_ids" binding:"omitempty"`
+	OldFileIDs       []string  `form:"old_file_ids[]" json:"old_file_ids" binding:"omitempty"`
 	UploadedUserID   *string   `form:"uploaded_user_id" json:"uploaded_user_id" binding:"omitempty,uuid"`
 	Title            *string   `form:"title" json:"title" binding:"omitempty"`
 	Description      *string   `form:"description" json:"description" binding:"omitempty"`

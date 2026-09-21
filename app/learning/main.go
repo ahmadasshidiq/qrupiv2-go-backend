@@ -37,6 +37,7 @@ func main() {
 		&models.LearningGroup{},
 		&models.LearningGroupMember{},
 		&models.LearningResource{},
+		&models.LearningResourceFile{},
 		&models.LearningResourceGroup{},
 		&models.Quiz{},
 		&models.QuizSession{},
@@ -44,6 +45,10 @@ func main() {
 		&models.AttendanceLog{},
 	); err != nil {
 		logger.Error("database migration failed", "error", err)
+		return
+	}
+	if err := migrateLegacyLearningResourceFiles(db); err != nil {
+		logger.Error("learning resource files migration failed", "error", err)
 		return
 	}
 	if err := models.MigrateLegacyStatusColumns(db); err != nil {

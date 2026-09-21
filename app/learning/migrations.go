@@ -5,6 +5,32 @@ import (
 	"gorm.io/gorm"
 )
 
+func migrateLegacyLearningResourceFiles(db *gorm.DB) error {
+	if !db.Migrator().HasTable(&models.LearningResource{}) ||
+		!db.Migrator().HasTable(&models.LearningResourceFile{}) ||
+		!db.Migrator().HasColumn(&models.LearningResource{}, "files") {
+		return nil
+	}
+
+	return db.Exec(`
+		INSERT INTO learning_resource_files
+			(id, learning_resource_id, type, url, sort_order, metadata, created_at, updated_at)
+		SELECT gen_random_uuid(), lr.id,
+			CASE
+				WHEN lower(item.url) LIKE '%youtube.com/%' OR lower(item.url) LIKE '%youtu.be/%' THEN 'youtube'
+				ELSE 'link'
+			END,
+			item.url, item.ordinality - 1, '{}'::jsonb, NOW(), NOW()
+		FROM learning_resources lr
+		CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(lr.files, '[]'::jsonb))
+			WITH ORDINALITY AS item(url, ordinality)
+		WHERE item.url <> ''
+			AND NOT EXISTS (
+				SELECT 1 FROM learning_resource_files lrf
+				WHERE lrf.learning_resource_id = lr.id AND lrf.url = item.url
+			)`).Error
+}
+
 func migrateLearningResourceGroups(db *gorm.DB) error {
 	migrator := db.Migrator()
 	if !migrator.HasColumn(&models.LearningResource{}, "learning_group_id") {

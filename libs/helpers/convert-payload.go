@@ -3,6 +3,7 @@ package helpers
 import (
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -77,7 +78,12 @@ func ScanRowsToMap(rows *sql.Rows) ([]map[string]interface{}, error) {
 
 			// []byte → string
 			case []byte:
-				row[col] = string(v)
+				var decoded interface{}
+				if len(v) > 0 && (v[0] == '[' || v[0] == '{') && json.Unmarshal(v, &decoded) == nil {
+					row[col] = decoded
+				} else {
+					row[col] = string(v)
+				}
 
 			// time.Time → formatted string
 			case time.Time:

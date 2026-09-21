@@ -56,7 +56,7 @@ func (c *LearningResourceController) GetByID(ctx *gin.Context) {
 // @Summary Create Learning Resource
 // @Tags Learning Resource API
 // @Param dto formData CreateDTO true "Learning Resource Data"
-// @Param files formData file false "Learning resource files (max 8 MB each)"
+// @Param file formData file false "Learning resource file (max 8 MB each)"
 // @Security BearerAuth
 // @Router /learning-resources [post]
 func (c *LearningResourceController) Create(ctx *gin.Context) {
@@ -70,6 +70,10 @@ func (c *LearningResourceController) Create(ctx *gin.Context) {
 		helpers.RespondError(ctx, "learning-resources", http.StatusInternalServerError, err)
 		return
 	}
+	if data == nil {
+		helpers.RespondErrorData(ctx, "learning-resources", http.StatusInternalServerError, "Learning Resource data is nil", nil)
+		return
+	}
 	helpers.RespondSuccess(ctx, "learning-resources", http.StatusCreated, data.ID)
 }
 
@@ -77,7 +81,7 @@ func (c *LearningResourceController) Create(ctx *gin.Context) {
 // @Tags Learning Resource API
 // @Param id path string true "Learning Resource ID"
 // @Param dto formData UpdateDTO true "Learning Resource Data"
-// @Param files formData file false "Replacement learning resource files (max 8 MB each)"
+// @Param file formData file false "Replacement learning resource file (max 8 MB each)"
 // @Security BearerAuth
 // @Router /learning-resources/{id} [put]
 func (c *LearningResourceController) Update(ctx *gin.Context) {
@@ -85,6 +89,14 @@ func (c *LearningResourceController) Update(ctx *gin.Context) {
 	if err := ctx.ShouldBind(&dto); err != nil {
 		helpers.RespondError(ctx, "learning-resources", http.StatusBadRequest, err)
 		return
+	}
+	// Browsers commonly submit array fields using the [] suffix. Gin's
+	// binder does not consistently map that spelling to a slice field.
+	if len(dto.OldFileIDs) == 0 {
+		dto.OldFileIDs = ctx.PostFormArray("old_file_ids[]")
+		if len(dto.OldFileIDs) == 0 {
+			dto.OldFileIDs = ctx.PostFormArray("old_file_ids")
+		}
 	}
 	data, err := c.Service.update(ctx, ctx.Param("id"), dto)
 	if err != nil {

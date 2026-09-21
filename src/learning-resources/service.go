@@ -1,7 +1,6 @@
 package learning_resources
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"clasenna-go-backend/libs/helpers"
 	"clasenna-go-backend/libs/models"
 	"clasenna-go-backend/libs/stores"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -22,94 +22,15 @@ type LearningResourceService struct{ DB *gorm.DB }
 
 func NewService(db *gorm.DB) *LearningResourceService { return &LearningResourceService{DB: db} }
 
-func (s *LearningResourceService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.PaginatedResult, error) {
-	params := make(map[string]interface{})
-	for key, values := range ctx.Request.URL.Query() {
-		if len(values) > 0 {
-			if key == "learning_group_id" {
-				params["lrg.learning_group_id"] = values[0]
-				continue
-			}
-			params[key] = values[0]
-		}
-	}
-	params["lr.deleted_at.isnull"] = ""
-	baseQuery := `select lr.*, u.name as uploaded_user_name, i.name as institution_name,
-		COALESCE(array_agg(lg.id) FILTER (WHERE lg.id IS NOT NULL), '{}') as learning_group_ids,
-		COALESCE(string_agg(lg.name, ', ' ORDER BY lg.name) FILTER (WHERE lg.id IS NOT NULL), '') as learning_group_names
-		from learning_resources lr
-		join users u on u.id = lr.uploaded_user_id
-		left join institutions i on i.id = u.institution_id
-		left join learning_resource_groups lrg on lrg.learning_resource_id = lr.id
-		left join learning_groups lg on lg.id = lrg.learning_group_id and lg.deleted_at is null`
-	return helpers.BuildPaginatedQuery(ctx, s.DB, params, "learning_resources", baseQuery, "group by lr.id, u.name, i.name", "", dto.SortBy)
-}
-
-func (s *LearningResourceService) getByID(id string) (*models.LearningResource, error) {
-	var data models.LearningResource
-	err := s.DB.Preload("LearningGroups").Preload("UploadedUser").First(&data, "id = ?", id).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	data.LearningGroupIDs = learningGroupIDs(data.LearningGroups)
-	return &data, err
-}
-
-func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*models.LearningResource, error) {
-	groups, err := s.resolveLearningGroups(dto.LearningGroupIDs)
-	if err != nil {
-		return nil, err
-	}
-	uploadedUserID, institutionID, err := s.resolveUploader(dto.UploadedUserID)
-	if err != nil {
-		return nil, err
-	}
-	data := models.LearningResource{
-		UploadedUserID: uploadedUserID, Title: dto.Title, Description: dto.Description,
-		Type: models.LearningResourceType(dto.Type),
-	}
-	files, err := json.Marshal(dto.Files)
-	if err != nil {
-		return nil, err
-	}
-	data.Files = files
-
-	uploadedURLs, fileErr := uploadLearningResourceFiles(ctx, institutionID)
-	if fileErr == nil && len(uploadedURLs) > 0 {
-		data.Files, _ = json.Marshal(append(dto.Files, uploadedURLs...))
-	} else if fileErr != http.ErrMissingFile {
-		return nil, fileErr
-	}
-
-	err = s.DB.WithContext(ctx.Request.Context()).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&data).Error; err != nil {
-			return err
-		}
-		return createResourceGroupLinks(tx, data.ID, groups)
-	})
-	if err != nil {
-		deleteLearningResourceFiles(uploadedURLs)
-		return nil, err
-	}
-	data.LearningGroups = groups
-	data.LearningGroupIDs = learningGroupIDs(groups)
-	return &data, nil
-}
-
 func uploadLearningResourceFiles(ctx *gin.Context, institutionID string) ([]string, error) {
-	if err := ctx.Request.ParseMultipartForm(0); err != nil {
+	if err := ctx.Request.ParseMultipartForm(32 << 20); err != nil {
 		if errors.Is(err, http.ErrNotMultipart) {
 			return nil, http.ErrMissingFile
 		}
 		return nil, err
 	}
-	fileHeaders := ctx.Request.MultipartForm.File["files"]
-	if len(fileHeaders) == 0 {
-		fileHeaders = ctx.Request.MultipartForm.File["file"]
-	}
+	fileHeaders := ctx.Request.MultipartForm.File["file"]
+
 	urls := make([]string, 0, len(fileHeaders))
 	for _, header := range fileHeaders {
 		if header.Size > maxLearningResourceFileSize {
@@ -133,22 +54,145 @@ func uploadLearningResourceFiles(ctx *gin.Context, institutionID string) ([]stri
 }
 
 func deleteLearningResourceFiles(urls []string) {
+	publicPrefix := strings.TrimSuffix(stores.MinioPublicURL, "/") + "/" + os.Getenv("MINIO_PRODUCT_BUCKET") + "/"
 	for _, url := range urls {
-		if url != "" {
+		// Do not try to delete external resources such as YouTube links.
+		if url != "" && strings.HasPrefix(url, publicPrefix) {
 			stores.DeleteMinioFiles(os.Getenv("MINIO_PRODUCT_BUCKET"), url)
 		}
 	}
 }
 
+func (s *LearningResourceService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.PaginatedResult, error) {
+	params := make(map[string]interface{})
+	for key, values := range ctx.Request.URL.Query() {
+		if len(values) > 0 {
+			if key == "learning_group_id" {
+				params["lrg.learning_group_id"] = values[0]
+				continue
+			}
+			params[key] = values[0]
+		}
+	}
+	params["lr.deleted_at.isnull"] = ""
+	baseQuery := `select lr.id, lr.title, lr.description, lr.type, lr.uploaded_user_id,
+		lr.created_at, lr.updated_at, lr.deleted_at,
+		COALESCE((
+			SELECT jsonb_agg(jsonb_build_object(
+				'id', lrf.id,
+				'learning_resource_id', lrf.learning_resource_id,
+				'type', lrf.type,
+				'url', lrf.url,
+				'original_name', lrf.original_name,
+				'mime_type', lrf.mime_type,
+				'size', lrf.size,
+				'sort_order', lrf.sort_order,
+				'metadata', lrf.metadata,
+				'created_at', lrf.created_at,
+				'updated_at', lrf.updated_at
+			) ORDER BY lrf.sort_order)
+			FROM learning_resource_files lrf
+			WHERE lrf.learning_resource_id = lr.id
+		), '[]'::jsonb) AS files,
+		u.name as uploaded_user_name, i.name as institution_name,
+		COALESCE(array_agg(lg.id) FILTER (WHERE lg.id IS NOT NULL), '{}') as learning_group_ids,
+		COALESCE(string_agg(lg.name, ', ' ORDER BY lg.name) FILTER (WHERE lg.id IS NOT NULL), '') as learning_group_names
+		from learning_resources lr
+		join users u on u.id = lr.uploaded_user_id
+		left join institutions i on i.id = u.institution_id
+		left join learning_resource_groups lrg on lrg.learning_resource_id = lr.id
+		left join learning_groups lg on lg.id = lrg.learning_group_id and lg.deleted_at is null`
+	return helpers.BuildPaginatedQuery(ctx, s.DB, params, "learning_resources", baseQuery, "group by lr.id, u.name, i.name", "", dto.SortBy)
+}
+
+func (s *LearningResourceService) getByID(id string) (*models.LearningResource, error) {
+	var data models.LearningResource
+	err := s.DB.Preload("LearningGroups").Preload("UploadedUser").Preload("ResourceFiles").First(&data, "id = ?", id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	data.LearningGroupIDs = learningGroupIDs(data.LearningGroups)
+	return &data, err
+}
+
+func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*models.LearningResource, error) {
+	groups, err := s.resolveLearningGroups(dto.LearningGroupIDs)
+	if err != nil {
+		return nil, err
+	}
+	uploadedUserID, institutionID, err := s.resolveUploader(dto.UploadedUserID)
+	if err != nil {
+		return nil, err
+	}
+	data := models.LearningResource{
+		UploadedUserID: uploadedUserID, Title: dto.Title, Description: dto.Description,
+		Type: models.LearningResourceType(dto.Type),
+	}
+	var uploadedURLs []string
+	if ctx.Request.MultipartForm != nil && len(ctx.Request.MultipartForm.File["file"]) > 0 {
+		var fileErr error
+		uploadedURLs, fileErr = uploadLearningResourceFiles(ctx, institutionID)
+		if fileErr != nil {
+			return nil, fileErr
+		}
+	}
+
+	err = s.DB.WithContext(ctx.Request.Context()).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&data).Error; err != nil {
+			return err
+		}
+		if err := syncLearningResourceFiles(tx, data.ID, append(dto.Files, uploadedURLs...)); err != nil {
+			return err
+		}
+		return createResourceGroupLinks(tx, data.ID, groups)
+	})
+	if err != nil {
+		deleteLearningResourceFiles(uploadedURLs)
+		return nil, err
+	}
+
+	data.LearningGroups = groups
+	data.LearningGroupIDs = learningGroupIDs(groups)
+	return &data, nil
+}
+
 func (s *LearningResourceService) update(ctx *gin.Context, id string, dto UpdateDTO) (*models.LearningResource, error) {
 	var data models.LearningResource
-	if err := s.DB.First(&data, "id = ?", id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := s.DB.Preload("ResourceFiles").First(&data, "id = ?", id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
-	var oldFileURLs []string
-	_ = json.Unmarshal(data.Files, &oldFileURLs)
+
+	fileURLs := make([]string, 0, len(data.ResourceFiles))
+	for _, file := range data.ResourceFiles {
+		fileURLs = append(fileURLs, file.URL)
+	}
+	var uploadedURLs []string
+	filesChanged := false
+	var oldFileIDs []uuid.UUID
+	for _, value := range dto.OldFileIDs {
+		fileID, parseErr := uuid.Parse(value)
+		if parseErr != nil {
+			return nil, errors.New("invalid old_file_ids format")
+		}
+		oldFileIDs = append(oldFileIDs, fileID)
+	}
+	if len(oldFileIDs) > 0 {
+		keep := make(map[uuid.UUID]struct{}, len(oldFileIDs))
+		for _, fileID := range oldFileIDs {
+			keep[fileID] = struct{}{}
+		}
+		fileURLs = fileURLs[:0]
+		for _, file := range data.ResourceFiles {
+			if _, exists := keep[file.ID]; exists {
+				fileURLs = append(fileURLs, file.URL)
+			}
+		}
+	}
 	var groups []models.LearningGroup
 	if dto.LearningGroupIDs != nil {
 		var err error
@@ -177,45 +221,66 @@ func (s *LearningResourceService) update(ctx *gin.Context, id string, dto Update
 	if dto.Type != nil {
 		data.Type = models.LearningResourceType(*dto.Type)
 	}
-	if dto.Files != nil {
-		files, err := json.Marshal(*dto.Files)
-		if err != nil {
-			return nil, err
+	// An empty files field can be produced by multipart binding when no file
+	// links were sent. Keep the existing links in that case.
+	if dto.Files != nil && len(*dto.Files) > 0 {
+		// When files is sent, it represents the final list of external URLs.
+		// Do not merge it with the old list, otherwise every update can append
+		// the same URL again.
+		if len(oldFileIDs) == 0 {
+			fileURLs = nil
 		}
-		data.Files = files
+		fileURLs = uniqueFileURLs(append(fileURLs, (*dto.Files)...))
+		filesChanged = true
 	}
 
-	uploadedURLs, fileErr := uploadLearningResourceFiles(ctx, institutionID)
-	if fileErr == nil && len(uploadedURLs) > 0 {
-		currentFiles := []string{}
-		_ = json.Unmarshal(data.Files, &currentFiles)
-		if dto.Files != nil {
-			currentFiles = *dto.Files
+	if ctx.Request.MultipartForm != nil && len(ctx.Request.MultipartForm.File["file"]) > 0 {
+		var fileErr error
+		uploadedURLs, fileErr = uploadLearningResourceFiles(ctx, institutionID)
+		if fileErr != nil {
+			return nil, fileErr
 		}
-		data.Files, _ = json.Marshal(append(currentFiles, uploadedURLs...))
-	} else if fileErr != http.ErrMissingFile {
-		return nil, fileErr
+		if len(uploadedURLs) > 0 {
+			if len(oldFileIDs) == 0 && !filesChanged {
+				fileURLs = nil
+			}
+			fileURLs = uniqueFileURLs(append(fileURLs, uploadedURLs...))
+			filesChanged = true
+		}
+	}
+	if len(dto.OldFileIDs) > 0 {
+		filesChanged = true
 	}
 
 	err = s.DB.WithContext(ctx.Request.Context()).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(&data).Error; err != nil {
 			return err
 		}
+
 		if dto.LearningGroupIDs == nil {
+			if filesChanged {
+				return reconcileLearningResourceFiles(tx, data.ID, oldFileIDs, fileURLs)
+			}
 			return nil
 		}
-		if err := tx.Where("learning_resource_id = ?", data.ID).Delete(&models.LearningResourceGroup{}).Error; err != nil {
+
+		if err := tx.Where("learning_resource_id = ?", data.ID).
+			Delete(&models.LearningResourceGroup{}).Error; err != nil {
 			return err
 		}
-		return createResourceGroupLinks(tx, data.ID, groups)
+		if err := createResourceGroupLinks(tx, data.ID, groups); err != nil {
+			return err
+		}
+		if filesChanged {
+			return reconcileLearningResourceFiles(tx, data.ID, oldFileIDs, fileURLs)
+		}
+		return nil
 	})
 	if err != nil {
 		deleteLearningResourceFiles(uploadedURLs)
 		return nil, err
 	}
-	if len(uploadedURLs) > 0 {
-		deleteLearningResourceFiles(oldFileURLs)
-	}
+
 	if dto.LearningGroupIDs != nil {
 		data.LearningGroups = groups
 	} else {
@@ -231,6 +296,99 @@ func learningGroupIDs(groups []models.LearningGroup) []uuid.UUID {
 		ids[index] = groups[index].ID
 	}
 	return ids
+}
+
+func uniqueFileURLs(urls []string) []string {
+	result := make([]string, 0, len(urls))
+	seen := make(map[string]struct{}, len(urls))
+	for _, url := range urls {
+		if url == "" {
+			continue
+		}
+		if _, exists := seen[url]; exists {
+			continue
+		}
+		seen[url] = struct{}{}
+		result = append(result, url)
+	}
+	return result
+}
+
+func syncLearningResourceFiles(tx *gorm.DB, resourceID uuid.UUID, urls []string) error {
+	if err := tx.Where("learning_resource_id = ?", resourceID).Delete(&models.LearningResourceFile{}).Error; err != nil {
+		return err
+	}
+	for index, url := range uniqueFileURLs(urls) {
+		fileType := models.LearningResourceFileTypeLink
+		lowerURL := strings.ToLower(url)
+		if strings.Contains(lowerURL, "youtube.com/") || strings.Contains(lowerURL, "youtu.be/") {
+			fileType = models.LearningResourceFileTypeYouTube
+		} else if strings.HasPrefix(url, strings.TrimSuffix(stores.MinioPublicURL, "/")) {
+			fileType = models.LearningResourceFileTypeFile
+		}
+		file := models.LearningResourceFile{
+			LearningResourceID: resourceID,
+			Type:               fileType,
+			URL:                url,
+			SortOrder:          index,
+		}
+		if err := tx.Create(&file).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func reconcileLearningResourceFiles(tx *gorm.DB, resourceID uuid.UUID, keepIDs []uuid.UUID, urls []string) error {
+	keep := make(map[uuid.UUID]struct{}, len(keepIDs))
+	for _, id := range keepIDs {
+		keep[id] = struct{}{}
+	}
+	var existing []models.LearningResourceFile
+	if err := tx.Where("learning_resource_id = ?", resourceID).Find(&existing).Error; err != nil {
+		return err
+	}
+	existingIDs := make(map[uuid.UUID]struct{}, len(existing))
+	for _, file := range existing {
+		existingIDs[file.ID] = struct{}{}
+	}
+	for _, fileID := range keepIDs {
+		if _, exists := existingIDs[fileID]; !exists {
+			return fmt.Errorf("old file %s does not belong to learning resource %s", fileID, resourceID)
+		}
+	}
+	for _, file := range existing {
+		if _, ok := keep[file.ID]; !ok {
+			if err := tx.Unscoped().Delete(&file).Error; err != nil {
+				return err
+			}
+			deleteLearningResourceFiles([]string{file.URL})
+		}
+	}
+	known := make(map[string]struct{}, len(existing))
+	for _, file := range existing {
+		if _, ok := keep[file.ID]; ok {
+			known[file.URL] = struct{}{}
+		}
+	}
+	for index, url := range uniqueFileURLs(urls) {
+		if _, ok := known[url]; ok {
+			continue
+		}
+		fileType := models.LearningResourceFileTypeLink
+		lowerURL := strings.ToLower(url)
+		if strings.Contains(lowerURL, "youtube.com/") || strings.Contains(lowerURL, "youtu.be/") {
+			fileType = models.LearningResourceFileTypeYouTube
+		} else if strings.HasPrefix(url, strings.TrimSuffix(stores.MinioPublicURL, "/")) {
+			fileType = models.LearningResourceFileTypeFile
+		}
+		if err := tx.Create(&models.LearningResourceFile{
+			LearningResourceID: resourceID, Type: fileType, URL: url, SortOrder: index,
+		}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *LearningResourceService) resolveLearningGroups(values []string) ([]models.LearningGroup, error) {
@@ -295,7 +453,7 @@ func (s *LearningResourceService) archive(id string) (bool, error) {
 
 func (s *LearningResourceService) delete(id string) (bool, error) {
 	var data models.LearningResource
-	if err := s.DB.Unscoped().First(&data, "id = ?", id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := s.DB.Unscoped().Preload("ResourceFiles").First(&data, "id = ?", id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return false, nil
 	} else if err != nil {
 		return false, err
@@ -304,12 +462,17 @@ func (s *LearningResourceService) delete(id string) (bool, error) {
 		if err := tx.Where("learning_resource_id = ?", data.ID).Delete(&models.LearningResourceGroup{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Unscoped().Where("learning_resource_id = ?", data.ID).Delete(&models.LearningResourceFile{}).Error; err != nil {
+			return err
+		}
 		return tx.Unscoped().Delete(&data).Error
 	}); err != nil {
 		return false, err
 	}
-	var fileURLs []string
-	_ = json.Unmarshal(data.Files, &fileURLs)
+	fileURLs := make([]string, 0, len(data.ResourceFiles))
+	for _, file := range data.ResourceFiles {
+		fileURLs = append(fileURLs, file.URL)
+	}
 	deleteLearningResourceFiles(fileURLs)
 	return true, nil
 }
