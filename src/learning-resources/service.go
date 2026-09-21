@@ -71,17 +71,15 @@ func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*mode
 		UploadedUserID: uploadedUserID, Title: dto.Title, Description: dto.Description,
 		Type: models.LearningResourceType(dto.Type),
 	}
-	if dto.Type != "media" {
-		files, err := json.Marshal(dto.Files)
-		if err != nil {
-			return nil, err
-		}
-		data.Files = files
+	files, err := json.Marshal(dto.Files)
+	if err != nil {
+		return nil, err
 	}
+	data.Files = files
 
 	uploadedURLs, fileErr := uploadLearningResourceFiles(ctx, institutionID)
 	if fileErr == nil {
-		data.Files, _ = json.Marshal(uploadedURLs)
+		data.Files, _ = json.Marshal(append(dto.Files, uploadedURLs...))
 	} else if fileErr != http.ErrMissingFile {
 		return nil, fileErr
 	}
@@ -103,6 +101,9 @@ func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*mode
 
 func uploadLearningResourceFiles(ctx *gin.Context, institutionID string) ([]string, error) {
 	if err := ctx.Request.ParseMultipartForm(0); err != nil {
+		if errors.Is(err, http.ErrNotMultipart) {
+			return nil, http.ErrMissingFile
+		}
 		return nil, err
 	}
 	fileHeaders := ctx.Request.MultipartForm.File["files"]
