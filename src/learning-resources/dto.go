@@ -21,6 +21,6 @@ type UpdateDTO struct {
 	UploadedUserID   *string   `form:"uploaded_user_id" json:"uploaded_user_id" binding:"omitempty,uuid"`
 	Title            *string   `form:"title" json:"title" binding:"omitempty"`
 	Description      *string   `form:"description" json:"description" binding:"omitempty"`
-	Type             *string   `form:"type" json:"type" binding:"omitempty,oneof=file video link"`
+	Type             *string   `form:"type" json:"type" binding:"omitempty,oneof=file video link interactive-media"`
 	Files            *[]string `form:"files" json:"files" binding:"omitempty"`
 }

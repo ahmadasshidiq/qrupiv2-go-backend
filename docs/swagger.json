@@ -1964,7 +1964,6 @@
                     },
                     {
                         "type": "string",
-                        "name": "file_url",
                         "in": "formData"
                     },
                     {
@@ -2057,7 +2056,6 @@
                     },
                     {
                         "type": "string",
-                        "name": "file_url",
                         "in": "formData"
                     },
                     {

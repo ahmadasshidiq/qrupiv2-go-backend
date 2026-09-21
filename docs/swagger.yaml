@@ -2014,9 +2014,6 @@ paths:
       - in: formData
         name: description
         type: string
-      - in: formData
-        name: file_url
-        type: string
       - collectionFormat: csv
         in: formData
         items:
@@ -2086,9 +2083,6 @@ paths:
         type: string
       - in: formData
         name: description
-        type: string
-      - in: formData
-        name: file_url
         type: string
       - collectionFormat: csv
         in: formData

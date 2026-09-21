@@ -1968,7 +1968,6 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "name": "file_url",
                         "in": "formData"
                     },
                     {
@@ -2061,7 +2060,6 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "name": "file_url",
                         "in": "formData"
                     },
                     {

@@ -72,7 +72,10 @@ func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*mode
 		Type: models.LearningResourceType(dto.Type),
 	}
 	if dto.Type != "file" {
-		files, _ := json.Marshal(dto.Files)
+		files, err := json.Marshal(resourceFiles(dto.Type, dto.Files))
+		if err != nil {
+			return nil, err
+		}
 		data.Files = files
 	}
 
@@ -174,7 +177,11 @@ func (s *LearningResourceService) update(ctx *gin.Context, id string, dto Update
 		data.Type = models.LearningResourceType(*dto.Type)
 	}
 	if dto.Files != nil {
-		data.Files, _ = json.Marshal(*dto.Files)
+		files, err := json.Marshal(resourceFiles(resourceType(data.Type, dto.Type), *dto.Files))
+		if err != nil {
+			return nil, err
+		}
+		data.Files = files
 	}
 
 	uploadedURLs, fileErr := uploadLearningResourceFiles(ctx, institutionID)
@@ -210,6 +217,33 @@ func (s *LearningResourceService) update(ctx *gin.Context, id string, dto Update
 	}
 	data.LearningGroupIDs = learningGroupIDs(data.LearningGroups)
 	return &data, nil
+}
+
+func resourceType(current models.LearningResourceType, updated *string) string {
+	if updated != nil {
+		return *updated
+	}
+	return string(current)
+}
+
+func resourceFiles(resourceType string, files []string) []string {
+	if resourceType != string(models.LearningResourceTypeInteractiveMedia) {
+		return files
+	}
+	baseURL := strings.TrimRight(os.Getenv("CRM_BASE_URL"), "/")
+	result := make([]string, 0, len(files))
+	for _, contentID := range files {
+		contentID = strings.TrimSpace(contentID)
+		if contentID == "" {
+			continue
+		}
+		if strings.HasPrefix(contentID, "http://") || strings.HasPrefix(contentID, "https://") {
+			result = append(result, contentID)
+			continue
+		}
+		result = append(result, fmt.Sprintf("%s/h5p/%s/play", baseURL, strings.Trim(contentID, "/")))
+	}
+	return result
 }
 
 func learningGroupIDs(groups []models.LearningGroup) []uuid.UUID {

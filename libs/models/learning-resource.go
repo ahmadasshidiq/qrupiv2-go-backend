@@ -11,9 +11,10 @@ import (
 type LearningResourceType string
 
 const (
-	LearningResourceTypeFile  LearningResourceType = "file"
-	LearningResourceTypeVideo LearningResourceType = "video"
-	LearningResourceTypeLink  LearningResourceType = "link"
+	LearningResourceTypeFile             LearningResourceType = "file"
+	LearningResourceTypeVideo            LearningResourceType = "video"
+	LearningResourceTypeLink             LearningResourceType = "link"
+	LearningResourceTypeInteractiveMedia LearningResourceType = "interactive-media"
 )
 
 type LearningResource struct {
