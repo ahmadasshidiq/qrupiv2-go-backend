@@ -12,15 +12,15 @@ type CreateDTO struct {
 	UploadedUserID   string   `form:"uploaded_user_id" json:"uploaded_user_id" binding:"required,uuid"`
 	Title            string   `form:"title" json:"title" binding:"required"`
 	Description      string   `form:"description" json:"description" binding:"omitempty"`
-	Type             string   `form:"type" json:"type" binding:"omitempty,oneof=file video link"`
-	FileURL          string   `form:"file_url" json:"file_url" binding:"omitempty"`
+	Type             string   `form:"type" json:"type" binding:"omitempty,oneof=file video link interactive-media"`
+	Files            []string `form:"files" json:"files" binding:"omitempty"`
 }
 
 type UpdateDTO struct {
-	LearningGroupIDs []string `form:"learning_group_ids" json:"learning_group_ids" binding:"omitempty"`
-	UploadedUserID   *string  `form:"uploaded_user_id" json:"uploaded_user_id" binding:"omitempty,uuid"`
-	Title            *string  `form:"title" json:"title" binding:"omitempty"`
-	Description      *string  `form:"description" json:"description" binding:"omitempty"`
-	Type             *string  `form:"type" json:"type" binding:"omitempty,oneof=file video link"`
-	FileURL          *string  `form:"file_url" json:"file_url" binding:"omitempty"`
+	LearningGroupIDs []string  `form:"learning_group_ids" json:"learning_group_ids" binding:"omitempty"`
+	UploadedUserID   *string   `form:"uploaded_user_id" json:"uploaded_user_id" binding:"omitempty,uuid"`
+	Title            *string   `form:"title" json:"title" binding:"omitempty"`
+	Description      *string   `form:"description" json:"description" binding:"omitempty"`
+	Type             *string   `form:"type" json:"type" binding:"omitempty,oneof=file video link"`
+	Files            *[]string `form:"files" json:"files" binding:"omitempty"`
 }

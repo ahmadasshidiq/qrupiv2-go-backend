@@ -1,6 +1,7 @@
 package learning_resources
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,6 +15,8 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+const maxLearningResourceFileSize int64 = 8 * 1024 * 1024
 
 type LearningResourceService struct{ DB *gorm.DB }
 
@@ -69,17 +72,13 @@ func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*mode
 		Type: models.LearningResourceType(dto.Type),
 	}
 	if dto.Type != "file" {
-		data.FileURL = dto.FileURL
+		files, _ := json.Marshal(dto.Files)
+		data.Files = files
 	}
 
-	file, header, fileErr := ctx.Request.FormFile("file")
+	uploadedURLs, fileErr := uploadLearningResourceFiles(ctx, institutionID)
 	if fileErr == nil {
-		defer file.Close()
-		publicURL, err := stores.UploadToMinio(file, os.Getenv("MINIO_PRODUCT_BUCKET"), institutionID, header.Filename, header.Header.Get("Content-Type"), header.Size)
-		if err != nil {
-			return nil, fmt.Errorf("failed to upload learning resource: %w", err)
-		}
-		data.FileURL = publicURL
+		data.Files, _ = json.Marshal(uploadedURLs)
 	} else if fileErr != http.ErrMissingFile {
 		return nil, fileErr
 	}
@@ -91,14 +90,50 @@ func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*mode
 		return createResourceGroupLinks(tx, data.ID, groups)
 	})
 	if err != nil {
-		if data.FileURL != "" && fileErr == nil {
-			stores.DeleteMinioFiles(os.Getenv("MINIO_PRODUCT_BUCKET"), data.FileURL)
-		}
+		deleteLearningResourceFiles(uploadedURLs)
 		return nil, err
 	}
 	data.LearningGroups = groups
 	data.LearningGroupIDs = learningGroupIDs(groups)
 	return &data, nil
+}
+
+func uploadLearningResourceFiles(ctx *gin.Context, institutionID string) ([]string, error) {
+	if err := ctx.Request.ParseMultipartForm(0); err != nil {
+		return nil, err
+	}
+	fileHeaders := ctx.Request.MultipartForm.File["files"]
+	if len(fileHeaders) == 0 {
+		fileHeaders = ctx.Request.MultipartForm.File["file"]
+	}
+	urls := make([]string, 0, len(fileHeaders))
+	for _, header := range fileHeaders {
+		if header.Size > maxLearningResourceFileSize {
+			deleteLearningResourceFiles(urls)
+			return nil, fmt.Errorf("file %q exceeds maximum size of 8 MB", header.Filename)
+		}
+		file, err := header.Open()
+		if err != nil {
+			deleteLearningResourceFiles(urls)
+			return nil, err
+		}
+		publicURL, err := stores.UploadToMinio(file, os.Getenv("MINIO_PRODUCT_BUCKET"), institutionID, header.Filename, header.Header.Get("Content-Type"), header.Size)
+		file.Close()
+		if err != nil {
+			deleteLearningResourceFiles(urls)
+			return nil, fmt.Errorf("failed to upload learning resource: %w", err)
+		}
+		urls = append(urls, publicURL)
+	}
+	return urls, nil
+}
+
+func deleteLearningResourceFiles(urls []string) {
+	for _, url := range urls {
+		if url != "" {
+			stores.DeleteMinioFiles(os.Getenv("MINIO_PRODUCT_BUCKET"), url)
+		}
+	}
 }
 
 func (s *LearningResourceService) update(ctx *gin.Context, id string, dto UpdateDTO) (*models.LearningResource, error) {
@@ -108,7 +143,8 @@ func (s *LearningResourceService) update(ctx *gin.Context, id string, dto Update
 	} else if err != nil {
 		return nil, err
 	}
-	oldFileURL := data.FileURL
+	var oldFileURLs []string
+	_ = json.Unmarshal(data.Files, &oldFileURLs)
 	var groups []models.LearningGroup
 	if dto.LearningGroupIDs != nil {
 		var err error
@@ -137,19 +173,13 @@ func (s *LearningResourceService) update(ctx *gin.Context, id string, dto Update
 	if dto.Type != nil {
 		data.Type = models.LearningResourceType(*dto.Type)
 	}
-	if dto.FileURL != nil {
-		data.FileURL = *dto.FileURL
+	if dto.Files != nil {
+		data.Files, _ = json.Marshal(*dto.Files)
 	}
 
-	file, header, fileErr := ctx.Request.FormFile("file")
-	var uploadedURL string
+	uploadedURLs, fileErr := uploadLearningResourceFiles(ctx, institutionID)
 	if fileErr == nil {
-		defer file.Close()
-		uploadedURL, err = stores.UploadToMinio(file, os.Getenv("MINIO_PRODUCT_BUCKET"), institutionID, header.Filename, header.Header.Get("Content-Type"), header.Size)
-		if err != nil {
-			return nil, fmt.Errorf("failed to upload learning resource: %w", err)
-		}
-		data.FileURL = uploadedURL
+		data.Files, _ = json.Marshal(uploadedURLs)
 	} else if fileErr != http.ErrMissingFile {
 		return nil, fileErr
 	}
@@ -167,13 +197,11 @@ func (s *LearningResourceService) update(ctx *gin.Context, id string, dto Update
 		return createResourceGroupLinks(tx, data.ID, groups)
 	})
 	if err != nil {
-		if uploadedURL != "" {
-			stores.DeleteMinioFiles(os.Getenv("MINIO_PRODUCT_BUCKET"), uploadedURL)
-		}
+		deleteLearningResourceFiles(uploadedURLs)
 		return nil, err
 	}
-	if uploadedURL != "" && oldFileURL != "" && oldFileURL != uploadedURL {
-		stores.DeleteMinioFiles(os.Getenv("MINIO_PRODUCT_BUCKET"), oldFileURL)
+	if len(uploadedURLs) > 0 {
+		deleteLearningResourceFiles(oldFileURLs)
 	}
 	if dto.LearningGroupIDs != nil {
 		data.LearningGroups = groups
@@ -267,8 +295,8 @@ func (s *LearningResourceService) delete(id string) (bool, error) {
 	}); err != nil {
 		return false, err
 	}
-	if data.FileURL != "" {
-		stores.DeleteMinioFiles(os.Getenv("MINIO_PRODUCT_BUCKET"), data.FileURL)
-	}
+	var fileURLs []string
+	_ = json.Unmarshal(data.Files, &fileURLs)
+	deleteLearningResourceFiles(fileURLs)
 	return true, nil
 }

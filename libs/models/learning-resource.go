@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -20,7 +21,7 @@ type LearningResource struct {
 	Title          string               `gorm:"type:varchar(200);not null" json:"title"`
 	Description    string               `gorm:"type:text" json:"description,omitempty"`
 	Type           LearningResourceType `gorm:"type:varchar(50);not null" json:"type"`
-	FileURL        string               `gorm:"type:text" json:"file_url"`
+	Files          datatypes.JSON       `gorm:"type:jsonb;not null;default:'[]'" json:"files"`
 	UploadedUserID uuid.UUID            `gorm:"type:uuid;not null;index" json:"uploaded_user_id"`
 	CreatedAt      time.Time            `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt      time.Time            `gorm:"autoUpdateTime" json:"updated_at"`
