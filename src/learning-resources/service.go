@@ -78,7 +78,7 @@ func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*mode
 	data.Files = files
 
 	uploadedURLs, fileErr := uploadLearningResourceFiles(ctx, institutionID)
-	if fileErr == nil {
+	if fileErr == nil && len(uploadedURLs) > 0 {
 		data.Files, _ = json.Marshal(append(dto.Files, uploadedURLs...))
 	} else if fileErr != http.ErrMissingFile {
 		return nil, fileErr
@@ -186,8 +186,13 @@ func (s *LearningResourceService) update(ctx *gin.Context, id string, dto Update
 	}
 
 	uploadedURLs, fileErr := uploadLearningResourceFiles(ctx, institutionID)
-	if fileErr == nil {
-		data.Files, _ = json.Marshal(uploadedURLs)
+	if fileErr == nil && len(uploadedURLs) > 0 {
+		currentFiles := []string{}
+		_ = json.Unmarshal(data.Files, &currentFiles)
+		if dto.Files != nil {
+			currentFiles = *dto.Files
+		}
+		data.Files, _ = json.Marshal(append(currentFiles, uploadedURLs...))
 	} else if fileErr != http.ErrMissingFile {
 		return nil, fileErr
 	}
