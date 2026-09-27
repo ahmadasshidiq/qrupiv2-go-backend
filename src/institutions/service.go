@@ -37,6 +37,13 @@ func (s *InstitutionService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*help
 
 	// filters
 	params["institutions.deleted_at.isnull"] = ""
+	if level, code := ctx.GetString("region_level"), ctx.GetString("region_code"); level != "" && code != "" && !s.isSuperAdmin(ctx) {
+		column := map[string]string{"province": "institutions.province_code", "regency": "institutions.regency_code", "district": "institutions.district_code", "village": "institutions.village_code"}[level]
+		if column == "" {
+			return nil, errors.New("invalid region scope")
+		}
+		params[column] = code
+	}
 
 	result, err := helpers.BuildPaginatedQuery(
 		ctx,
@@ -54,6 +61,12 @@ func (s *InstitutionService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*help
 	}
 
 	return result, nil
+}
+
+func (s *InstitutionService) isSuperAdmin(ctx *gin.Context) bool {
+	var name string
+	s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&name)
+	return helpers.IsRole(name, "super_admin")
 }
 
 func (s *InstitutionService) getByID(id string) (*models.Institution, error) {

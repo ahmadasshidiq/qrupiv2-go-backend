@@ -17,6 +17,8 @@ const (
 type User struct {
 	ID            uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	InstitutionID *uuid.UUID     `gorm:"type:uuid;index" json:"institution_id"`
+	RegionLevel   string         `gorm:"type:varchar(20);index" json:"region_level,omitempty"`
+	RegionCode    string         `gorm:"type:varchar(20);index" json:"region_code,omitempty"`
 	RoleID        uuid.UUID      `gorm:"type:uuid;not null" json:"role_id"`
 	Name          string         `gorm:"type:varchar(255);not null" json:"name"`
 	Email         string         `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`

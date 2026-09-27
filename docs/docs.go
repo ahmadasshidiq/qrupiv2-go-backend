@@ -1967,7 +1967,12 @@ const docTemplate = `{
                         "in": "formData"
                     },
                     {
-                        "type": "string",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "name": "files",
                         "in": "formData"
                     },
                     {
@@ -1989,9 +1994,8 @@ const docTemplate = `{
                     },
                     {
                         "enum": [
-                            "file",
-                            "video",
-                            "link"
+                            "media",
+                            "interactive-media"
                         ],
                         "type": "string",
                         "name": "type",
@@ -2005,7 +2009,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "file",
-                        "description": "Learning resource file",
+                        "description": "Learning resource file (max 8 MB each)",
                         "name": "file",
                         "in": "formData"
                     }
@@ -2059,7 +2063,12 @@ const docTemplate = `{
                         "in": "formData"
                     },
                     {
-                        "type": "string",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "name": "files",
                         "in": "formData"
                     },
                     {
@@ -2072,15 +2081,23 @@ const docTemplate = `{
                         "in": "formData"
                     },
                     {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "name": "old_file_ids",
+                        "in": "formData"
+                    },
+                    {
                         "type": "string",
                         "name": "title",
                         "in": "formData"
                     },
                     {
                         "enum": [
-                            "file",
-                            "video",
-                            "link"
+                            "media",
+                            "interactive-media"
                         ],
                         "type": "string",
                         "name": "type",
@@ -2093,7 +2110,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "file",
-                        "description": "Replacement learning resource file",
+                        "description": "Replacement learning resource file (max 8 MB each)",
                         "name": "file",
                         "in": "formData"
                     }
@@ -4356,7 +4373,8 @@ const docTemplate = `{
                     "enum": [
                         "multiple_choice",
                         "essay",
-                        "true_false"
+                        "true_false",
+                        "fill_blank"
                     ]
                 }
             }

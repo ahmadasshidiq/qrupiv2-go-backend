@@ -29,15 +29,49 @@ func (s *AttendanceLogService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*he
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
 		params["u.institution_id"] = institutionID
 	}
-	base := `select al.*, ar.name as absence_reason_name, u.name as user_name, u.email as user_email, u.context_type as user_context_type, u.context_code as user_context_code ,u.institution_id,
+	scopeJoin, err := s.teacherScope(ctx)
+	if err != nil {
+		return nil, err
+	}
+	base := fmt.Sprintf(`select distinct on (al.id) al.*, ar.name as absence_reason_name, u.name as user_name, u.email as user_email, u.context_type as user_context_type, u.context_code as user_context_code ,u.institution_id,
 		ru.name as recorded_user_name,
 		lg.name as learning_group_name
 		from attendance_logs al
 		join users u on u.id = al.user_id
 		left join users ru on ru.id = al.recorded_user_id
 		left join learning_groups lg on lg.id = al.learning_group_id and lg.deleted_at is null
-		left join attendance_absence_reasons ar on ar.id = al.absence_reason_id and ar.deleted_at is null`
+		left join attendance_absence_reasons ar on ar.id = al.absence_reason_id and ar.deleted_at is null
+		%s`, scopeJoin)
 	return helpers.BuildPaginatedQuery(ctx, s.DB, params, "attendance_logs", base, "", "", dto.SortBy)
+}
+
+// Teachers can see logs they recorded themselves, or logs belonging to a
+// learning group where they are an active member.
+func (s *AttendanceLogService) teacherScope(ctx *gin.Context) (string, error) {
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		return "", nil
+	}
+	var user models.User
+	if err := s.DB.Select("type").First(&user, "id = ?", userID).Error; err != nil {
+		return "", err
+	}
+	if user.Type != "teacher" {
+		return "", nil
+	}
+	id, err := uuid.Parse(userID)
+	if err != nil {
+		return "", errors.New("invalid authenticated user id")
+	}
+	join := fmt.Sprintf(`join (
+		select al_scope.id from attendance_logs al_scope
+		where al_scope.recorded_user_id = '%s'
+		union
+		select al_scope.id from attendance_logs al_scope
+		join learning_group_members attendance_lgm on attendance_lgm.learning_group_id = al_scope.learning_group_id
+			and attendance_lgm.user_id = '%s' and attendance_lgm.deleted_at is null
+	) attendance_scope on attendance_scope.id = al.id`, id, id)
+	return join, nil
 }
 
 func (s *AttendanceLogService) getByID(ctx *gin.Context, id string) (*models.AttendanceLog, error) {
@@ -46,6 +80,12 @@ func (s *AttendanceLogService) getByID(ctx *gin.Context, id string) (*models.Att
 		Preload("AbsenceReason", func(db *gorm.DB) *gorm.DB { return db.Unscoped() }).Where("attendance_logs.id = ?", id)
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
 		query = query.Where("users.institution_id = ?", institutionID)
+	}
+	if join, scopeErr := s.teacherScope(ctx); scopeErr != nil {
+		return nil, scopeErr
+	} else if join != "" {
+		query = query.Joins("LEFT JOIN learning_group_members teacher_lgm ON teacher_lgm.learning_group_id = attendance_logs.learning_group_id AND teacher_lgm.user_id = ? AND teacher_lgm.deleted_at IS NULL", ctx.GetString("user_id"))
+		query = query.Where("attendance_logs.recorded_user_id = ? OR teacher_lgm.id IS NOT NULL", ctx.GetString("user_id"))
 	}
 	err := query.First(&data).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {

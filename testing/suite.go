@@ -144,7 +144,6 @@ func runLearningResourceScenario(r *Runner, runID string, groupIDs []string, use
 	fields := form(map[string]string{
 		"uploaded_user_id": userID, "title": "Modul Regional " + runID,
 		"description": "Ditugaskan ke seluruh kelas dan mata pelajaran pada institution target", "type": "link",
-		"file_url": "https://example.com/modules/" + runID,
 	})
 	fields["learning_group_ids"] = groupIDs
 	created := r.Form("Learning resource - insert all target groups", http.MethodPost, "/learning-resources", fields, http.StatusCreated)

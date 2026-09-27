@@ -12,6 +12,8 @@ func RegisterActivityModule(router *gin.RouterGroup, db *gorm.DB) {
 	g := router.Group("/activities")
 	g.Use(cryptography.JWTMiddleware(db))
 	g.GET("", p.Handler("activities", "get-all"), c.GetAll)
+	g.GET("/limits", p.Handler("activities", "get-all"), c.GetLimitStatuses)
+	g.GET("/limits/bulk", p.Handler("activities", "get-all"), c.GetBulkLimitStatuses)
 	g.GET("/chart", p.Handler("activities", "get-all"), c.GetChart)
 	g.GET("/:id", p.Handler("activities", "get-by-id"), c.GetByID)
 	g.POST("/bulk", p.Handler("activities", "create"), c.CreateBulk)

@@ -75,7 +75,31 @@ func (s *LearningResourceService) getAll(ctx *gin.Context, dto DefaultFindDTO) (
 		}
 	}
 	params["lr.deleted_at.isnull"] = ""
+	var role string
+	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
+		return nil, err
+	}
+	userID := ctx.GetString("user_id")
+	if helpers.IsRole(role, "student") {
+		params["viewer_lgm.user_id"] = userID
+		params["viewer_lgm.role_in_group"] = "student"
+	}
+	if helpers.IsRole(role, "instructor") {
+		params["viewer_lgm.user_id"] = userID
+		params["viewer_lgm.role_in_group"] = "instructor"
+	}
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" && !helpers.IsRole(role, "super_admin") {
+		params["i.id"] = institutionID
+	}
+	viewerJoin := "left join learning_group_members viewer_lgm on viewer_lgm.learning_group_id = lrg.learning_group_id and viewer_lgm.deleted_at is null"
+	// Admin melihat seluruh resource. Jangan join seluruh anggota group ke alias
+	// viewer_lgm karena satu resource akan menjadi satu baris per anggota group.
+	if !helpers.IsRole(role, "student") && !helpers.IsRole(role, "instructor") {
+		viewerJoin = "left join learning_group_members viewer_lgm on false"
+	}
 	baseQuery := `select lr.id, lr.title, lr.description, lr.type, lr.uploaded_user_id,
+		viewer_lgm.user_id as viewer_member_user_id, viewer_lgm.role_in_group as viewer_member_role,
+		i.id as resource_institution_id,
 		lr.created_at, lr.updated_at, lr.deleted_at,
 		COALESCE((
 			SELECT jsonb_agg(jsonb_build_object(
@@ -101,8 +125,10 @@ func (s *LearningResourceService) getAll(ctx *gin.Context, dto DefaultFindDTO) (
 		join users u on u.id = lr.uploaded_user_id
 		left join institutions i on i.id = u.institution_id
 		left join learning_resource_groups lrg on lrg.learning_resource_id = lr.id
+		%s
 		left join learning_groups lg on lg.id = lrg.learning_group_id and lg.deleted_at is null`
-	return helpers.BuildPaginatedQuery(ctx, s.DB, params, "learning_resources", baseQuery, "group by lr.id, u.name, i.name", "", dto.SortBy)
+	baseQuery = fmt.Sprintf(baseQuery, viewerJoin)
+	return helpers.BuildPaginatedQuery(ctx, s.DB, params, "learning_resources", baseQuery, "group by lr.id, u.name, i.id, i.name, viewer_lgm.user_id, viewer_lgm.role_in_group", "", dto.SortBy)
 }
 
 func (s *LearningResourceService) getByID(id string) (*models.LearningResource, error) {

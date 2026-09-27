@@ -5,6 +5,7 @@ import (
 	"clasenna-go-backend/libs/models"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,142 @@ type ActivityService struct{ DB *gorm.DB }
 
 func NewService(db *gorm.DB) *ActivityService { return &ActivityService{DB: db} }
 
+func (s *ActivityService) getLimitStatuses(ctx *gin.Context, date string) ([]ActivityLimitStatus, error) {
+	day, err := time.ParseInLocation("2006-01-02", date, time.Local)
+	if err != nil {
+		return nil, err
+	}
+	userID, err := uuid.Parse(ctx.GetString("user_id"))
+	if err != nil {
+		return nil, errors.New("authenticated user is required")
+	}
+	var items []models.ActivityItem
+	query := s.DB.Where("deleted_at IS NULL")
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" && !s.isSuperAdmin(ctx) {
+		query = query.Where("institution_id = ?", institutionID)
+	}
+	if err := query.Order("name ASC").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	result := make([]ActivityLimitStatus, 0, len(items))
+	for _, item := range items {
+		status := ActivityLimitStatus{ActivityItemID: item.ID, Name: item.Name, DailyLimit: item.DailyLimit, PeriodLimit: item.PeriodLimit, PeriodType: string(item.PeriodType)}
+		base := s.DB.Model(&models.Activity{}).Where("user_id = ? AND item_id = ? AND deleted_at IS NULL", userID, item.ID)
+		if err := base.Where("occurred_at >= ? AND occurred_at < ?", day, day.AddDate(0, 0, 1)).Count(&status.DailyUsed).Error; err != nil {
+			return nil, err
+		}
+		if item.PeriodLimit > 0 && item.PeriodType != models.ActivityLimitNone {
+			start, end, ok, e := activityLimitPeriod(item.PeriodType, day)
+			if e != nil {
+				return nil, e
+			}
+			if ok {
+				if err := base.Where("occurred_at >= ? AND occurred_at < ?", start, end).Count(&status.PeriodUsed).Error; err != nil {
+					return nil, err
+				}
+			}
+		}
+		if item.DailyLimit > 0 && status.DailyUsed >= int64(item.DailyLimit) {
+			status.Locked = true
+			status.Reason = "daily_limit_reached"
+		}
+		if !status.Locked && item.PeriodLimit > 0 && status.PeriodUsed >= int64(item.PeriodLimit) {
+			status.Locked = true
+			status.Reason = "period_limit_reached"
+		}
+		result = append(result, status)
+	}
+	return result, nil
+}
+
+func (s *ActivityService) getBulkLimitStatuses(ctx *gin.Context, date, groupID string, rawUserIDs []string) ([]BulkActivityLimitStatus, error) {
+	day, err := time.ParseInLocation("2006-01-02", date, time.Local)
+	if err != nil {
+		return nil, err
+	}
+	var ids []uuid.UUID
+	if groupID != "" {
+		gid, e := uuid.Parse(groupID)
+		if e != nil {
+			return nil, errors.New("invalid learning_group_id format")
+		}
+		q := s.DB.Table("learning_group_members lgm").Where("lgm.learning_group_id = ? AND lgm.deleted_at IS NULL AND lgm.role_in_group = ?", gid, models.RoleInGroupStudent)
+		if institutionID := ctx.GetString("institution_id"); institutionID != "" && !s.isSuperAdmin(ctx) {
+			q = q.Joins("JOIN learning_groups lg ON lg.id = lgm.learning_group_id").Where("lg.institution_id = ?", institutionID)
+		}
+		if err := q.Pluck("lgm.user_id", &ids).Error; err != nil {
+			return nil, err
+		}
+	} else {
+		for _, value := range rawUserIDs {
+			for _, part := range strings.Split(value, ",") {
+				if part == "" {
+					continue
+				}
+				id, e := uuid.Parse(strings.TrimSpace(part))
+				if e != nil {
+					return nil, errors.New("invalid user_ids format")
+				}
+				ids = append(ids, id)
+			}
+		}
+		if len(ids) == 0 {
+			return nil, errors.New("learning_group_id or user_ids is required")
+		}
+	}
+	if len(ids) == 0 {
+		return []BulkActivityLimitStatus{}, nil
+	}
+	var users []models.User
+	q := s.DB.Where("id IN ? AND deleted_at IS NULL", ids)
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" && !s.isSuperAdmin(ctx) {
+		q = q.Where("institution_id = ?", institutionID)
+	}
+	if err := q.Order("name ASC").Find(&users).Error; err != nil {
+		return nil, err
+	}
+	var items []models.ActivityItem
+	itemsQuery := s.DB.Where("deleted_at IS NULL")
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" && !s.isSuperAdmin(ctx) {
+		itemsQuery = itemsQuery.Where("institution_id = ?", institutionID)
+	}
+	if err := itemsQuery.Order("name ASC").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	result := make([]BulkActivityLimitStatus, 0, len(users))
+	for _, user := range users {
+		statuses := make([]ActivityLimitStatus, 0, len(items))
+		for _, item := range items {
+			status := ActivityLimitStatus{ActivityItemID: item.ID, Name: item.Name, DailyLimit: item.DailyLimit, PeriodLimit: item.PeriodLimit, PeriodType: string(item.PeriodType)}
+			base := s.DB.Model(&models.Activity{}).Where("user_id = ? AND item_id = ? AND deleted_at IS NULL", user.ID, item.ID)
+			if err := base.Where("occurred_at >= ? AND occurred_at < ?", day, day.AddDate(0, 0, 1)).Count(&status.DailyUsed).Error; err != nil {
+				return nil, err
+			}
+			if item.PeriodLimit > 0 && item.PeriodType != models.ActivityLimitNone {
+				start, end, ok, e := activityLimitPeriod(item.PeriodType, day)
+				if e != nil {
+					return nil, e
+				}
+				if ok {
+					if err := base.Where("occurred_at >= ? AND occurred_at < ?", start, end).Count(&status.PeriodUsed).Error; err != nil {
+						return nil, err
+					}
+				}
+			}
+			if item.DailyLimit > 0 && status.DailyUsed >= int64(item.DailyLimit) {
+				status.Locked = true
+				status.Reason = "daily_limit_reached"
+			} else if item.PeriodLimit > 0 && status.PeriodUsed >= int64(item.PeriodLimit) {
+				status.Locked = true
+				status.Reason = "period_limit_reached"
+			}
+			statuses = append(statuses, status)
+		}
+		result = append(result, BulkActivityLimitStatus{UserID: user.ID.String(), UserName: user.Name, Items: statuses})
+	}
+	return result, nil
+}
+
 func (s *ActivityService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.PaginatedResult, error) {
 	params := make(map[string]interface{})
 	for key, values := range ctx.Request.URL.Query() {
@@ -25,7 +162,17 @@ func (s *ActivityService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers
 		}
 	}
 	params["a.deleted_at.isnull"] = ""
-	base := `select a.id, a.item_id as activity_item_id, a.user_id, a.learning_group_id,
+	if err := s.applyViewerScope(ctx, params); err != nil {
+		return nil, err
+	}
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" && !s.isSuperAdmin(ctx) {
+		params["a.institution_id"] = institutionID
+	}
+	teacherWhere, err := s.teacherScope(ctx)
+	if err != nil {
+		return nil, err
+	}
+	base := fmt.Sprintf(`select a.id, a.item_id as activity_item_id, a.user_id, a.learning_group_id,
 		a.recorded_user_id, a.description, a.point_value, a.platform, a.occurred_at,
 		a.created_at, a.updated_at, ai.name as activity_item_name, ai.type as activity_item_type,
 		ac.id as category_id, ac.name as category_name, u.name as user_name,
@@ -35,8 +182,54 @@ func (s *ActivityService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers
 		join activity_categories ac on ac.id = ai.category_id and ac.deleted_at is null
 		join users u on u.id = a.user_id
 		join users ru on ru.id = a.recorded_user_id
-		left join learning_groups lg on lg.id = a.learning_group_id`
+		left join learning_groups lg on lg.id = a.learning_group_id
+		%s`, teacherWhere)
 	return helpers.BuildPaginatedQuery(ctx, s.DB, params, "activities", base, "", "", dto.SortBy)
+}
+
+func (s *ActivityService) teacherScope(ctx *gin.Context) (string, error) {
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		return "", nil
+	}
+	var user models.User
+	if err := s.DB.Select("type").First(&user, "id = ?", userID).Error; err != nil {
+		return "", err
+	}
+	if user.Type != "teacher" {
+		return "", nil
+	}
+	id, err := uuid.Parse(userID)
+	if err != nil {
+		return "", errors.New("invalid authenticated user id")
+	}
+	return fmt.Sprintf(`join (
+		select a_scope.id
+		from activities a_scope
+		where a_scope.recorded_user_id = '%s'
+		union
+		select a_scope.id
+		from activities a_scope
+		join learning_group_members activity_lgm on activity_lgm.learning_group_id = a_scope.learning_group_id
+			and activity_lgm.user_id = '%s' and activity_lgm.deleted_at is null
+	) activity_scope on activity_scope.id = a.id`, id, id), nil
+}
+
+func (s *ActivityService) isSuperAdmin(ctx *gin.Context) bool {
+	var role string
+	s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role)
+	return helpers.IsRole(role, "super_admin")
+}
+
+func (s *ActivityService) applyViewerScope(ctx *gin.Context, params map[string]interface{}) error {
+	var user models.User
+	if err := s.DB.Select("type").First(&user, "id = ?", ctx.GetString("user_id")).Error; err != nil {
+		return err
+	}
+	if user.Type == "student" {
+		params["a.user_id"] = ctx.GetString("user_id")
+	}
+	return nil
 }
 
 func (s *ActivityService) getByID(id string) (*models.Activity, error) {

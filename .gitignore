@@ -23,6 +23,9 @@ go.work.sum
 # env file
 .env
 
+# Firebase service-account credentials
+libs/*-firebase-adminsdk-*.json
+
 # Generated API integration test reports
 testing/reports/*.json
 testing/reports/*.html

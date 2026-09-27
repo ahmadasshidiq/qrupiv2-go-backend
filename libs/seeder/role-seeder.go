@@ -52,6 +52,29 @@ func SeedRoles(DB *gorm.DB) error {
 	return nil
 }
 
+// SeedDinasPendidikanRole creates the region-scoped institution manager role.
+func SeedDinasPendidikanRole(DB *gorm.DB) error {
+	permissions, err := json.Marshal([]models.PermissionItem{
+		{Model: "institutions", Action: "get-all"}, {Model: "institutions", Action: "get-by-id"},
+		{Model: "users", Action: "get-all"}, {Model: "learning-groups", Action: "get-all"},
+	})
+	if err != nil {
+		return err
+	}
+	role := models.Role{Name: "Dinas Pendidikan", Description: "Mengelola data institution dalam wilayah yang ditentukan", Permissions: permissions}
+	var existing models.Role
+	if err := DB.Where("name = ?", role.Name).First(&existing).Error; err == gorm.ErrRecordNotFound {
+		return DB.Create(&role).Error
+	} else if err != nil {
+		return err
+	}
+	if string(existing.Permissions) != string(permissions) {
+		existing.Permissions = permissions
+		return DB.Save(&existing).Error
+	}
+	return nil
+}
+
 // Seeder untuk user Super Admin (owner)
 func SeedSuperAdminUser(DB *gorm.DB) error {
 	adminEmail := os.Getenv("SEED_EMAIL")
@@ -106,6 +129,7 @@ func SeedSuperAdminUser(DB *gorm.DB) error {
 func RunSeeders(DB *gorm.DB) {
 	seeders := []func(*gorm.DB) error{
 		SeedRoles,
+		SeedDinasPendidikanRole,
 		SeedSuperAdminUser,
 		SeedAttendanceAbsenceReasons,
 	}

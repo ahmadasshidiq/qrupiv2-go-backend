@@ -29,10 +29,21 @@ func (s *LearningGroupMemberService) getAll(ctx *gin.Context, dto DefaultFindDTO
 
 	// filters
 	params["lgm.deleted_at.isnull"] = ""
+	var role string
+	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
+		return nil, err
+	}
+	if helpers.IsRole(role, "student") || helpers.IsRole(role, "instructor") {
+		params["lgm.user_id"] = ctx.GetString("user_id")
+	}
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" && !helpers.IsRole(role, "super_admin") {
+		params["lg.institution_id"] = institutionID
+	}
 
 	baseQuery := `
 		select
 			lgm.*,
+			lg.institution_id as institution_id,
 			lg.name as learning_group_name,
 			u.name as user_name,
 			u.avatar_url as user_avatar_url,

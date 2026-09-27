@@ -49,7 +49,7 @@ type activityLimitCount struct {
 	Count int64  `gorm:"column:activity_count"`
 }
 
-func (s *ActivityService) createBulk(dto BulkCreateDTO) (*BulkCreateResult, error) {
+func (s *ActivityService) createBulk(dto BulkCreateDTO, institutionID *uuid.UUID) (*BulkCreateResult, error) {
 	if len(dto.Activities) == 0 || len(dto.Activities) > MaxBulkActivities {
 		return nil, &BulkValidationError{Index: -1, Field: "activities", Message: fmt.Sprintf("must contain between 1 and %d records", MaxBulkActivities)}
 	}
@@ -84,6 +84,7 @@ func (s *ActivityService) createBulk(dto BulkCreateDTO) (*BulkCreateResult, erro
 	}
 
 	var created []models.Activity
+	var skipped []BulkValidationError
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
 		if err := validateBulkReferences(tx, entries, recordedUserID, learningGroupID, userIDs); err != nil {
 			return err
@@ -110,7 +111,8 @@ func (s *ActivityService) createBulk(dto BulkCreateDTO) (*BulkCreateResult, erro
 		created = make([]models.Activity, 0, len(entries))
 		for index, entry := range entries {
 			if exceeded := consumeLimitBuckets(counts, bucketsByEntry[index], buckets); exceeded != nil {
-				return bulkEntryError(index, exceeded.field, exceeded.message)
+				skipped = append(skipped, BulkValidationError{Index: index, Field: exceeded.field, Message: exceeded.message})
+				continue
 			}
 
 			pointValue := items[entry.itemID].PointValue
@@ -118,6 +120,7 @@ func (s *ActivityService) createBulk(dto BulkCreateDTO) (*BulkCreateResult, erro
 				pointValue = *entry.pointValue
 			}
 			created = append(created, models.Activity{
+				InstitutionID:   institutionID,
 				ActivityItemID:  entry.itemID,
 				UserID:          entry.userID,
 				LearningGroupID: learningGroupID,
@@ -138,7 +141,7 @@ func (s *ActivityService) createBulk(dto BulkCreateDTO) (*BulkCreateResult, erro
 	for index := range created {
 		ids[index] = created[index].ID.String()
 	}
-	return &BulkCreateResult{Count: len(created), IDs: ids}, nil
+	return &BulkCreateResult{Count: len(created), IDs: ids, Skipped: skipped}, nil
 }
 
 func consumeLimitBuckets(counts map[string]int64, keys []string, buckets map[string]activityLimitBucket) *activityLimitBucket {

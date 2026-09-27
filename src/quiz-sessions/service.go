@@ -35,8 +35,12 @@ func (s *QuizSessionService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*help
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
 		params["i.id"] = institutionID
 	}
+	scopeJoin, err := s.memberScope(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	baseQuery := `
+	baseQuery := fmt.Sprintf(`
 		select
 			qs.*,
 			qs.score as final_score,
@@ -49,7 +53,8 @@ func (s *QuizSessionService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*help
 		join users u on u.id = qs.user_id
 		join learning_groups lg on lg.id = q.learning_group_id
 		join institutions i on i.id = lg.institution_id
-	`
+		%s
+	`, scopeJoin)
 
 	result, err := helpers.BuildPaginatedQuery(
 		ctx,
@@ -67,6 +72,30 @@ func (s *QuizSessionService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*help
 	}
 
 	return result, nil
+}
+
+func (s *QuizSessionService) memberScope(ctx *gin.Context) (string, error) {
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		return "", nil
+	}
+	var user models.User
+	if err := s.DB.Select("type").First(&user, "id = ?", userID).Error; err != nil {
+		return "", err
+	}
+	if user.Type != "teacher" && user.Type != "student" {
+		return "", nil
+	}
+	id, err := uuid.Parse(userID)
+	if err != nil {
+		return "", errors.New("invalid authenticated user id")
+	}
+	return fmt.Sprintf(`join (select distinct qs_scope.id
+		from quiz_sessions qs_scope
+		join quizzes q_scope on q_scope.id = qs_scope.quiz_id
+		join learning_group_members session_lgm on session_lgm.learning_group_id = q_scope.learning_group_id
+			and session_lgm.user_id = '%s' and session_lgm.deleted_at is null
+	) session_scope on session_scope.id = qs.id`, id), nil
 }
 
 func (s *QuizSessionService) getByID(id string) (*models.QuizSession, error) {

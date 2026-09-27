@@ -80,6 +80,12 @@ var MasterPermissions = []models.PermissionItem{
 	{Model: "learning-resources", Action: "archive"},
 	{Model: "learning-resources", Action: "delete"},
 
+	{Model: "legal-documents", Action: "get-all"},
+	{Model: "legal-documents", Action: "get-by-id"},
+	{Model: "legal-documents", Action: "create"},
+	{Model: "legal-documents", Action: "update"},
+	{Model: "legal-documents", Action: "delete"},
+
 	{Model: "quizzes", Action: "get-all"},
 	{Model: "quizzes", Action: "get-by-id"},
 	{Model: "quizzes", Action: "create"},

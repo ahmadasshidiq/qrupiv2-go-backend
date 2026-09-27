@@ -10,6 +10,8 @@ import (
 	"clasenna-go-backend/libs/httpserver"
 	kafkalib "clasenna-go-backend/libs/kafka"
 	loglib "clasenna-go-backend/libs/logger"
+	"clasenna-go-backend/libs/models"
+	notif "clasenna-go-backend/libs/notifications"
 	"clasenna-go-backend/libs/stores"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -26,6 +28,15 @@ func main() {
 		return
 	}
 	store := kafkalib.GormIdempotencyStore{DB: db}
+	fcm, err := notif.NewFCMSender(ctx)
+	if err != nil {
+		logger.Error("firebase startup failed", "error", err)
+		return
+	}
+	if err := db.AutoMigrate(&models.Notification{}, &models.Announcement{}, &models.NotificationDevice{}); err != nil {
+		logger.Error("notification database migration failed", "error", err)
+		return
+	}
 	if err := store.Migrate(); err != nil {
 		logger.Error("migration failed", "error", err)
 		return
@@ -40,7 +51,7 @@ func main() {
 	consumer := kafkalib.NewConsumer(kafkalib.ConsumerConfig{Brokers: brokers, Topic: eventsTopic, GroupID: "notification-service", DLQTopic: dlqTopic, MaxRetries: helpers.ConfigInt("KAFKA_MAX_RETRIES", 3), RetryDelay: helpers.ConfigDuration("KAFKA_RETRY_DELAY", time.Second)}, store, logger)
 	defer consumer.Close()
 	go func() {
-		if err := consumer.Run(ctx, HandleEvent(logger)); err != nil {
+		if err := consumer.Run(ctx, HandleEvent(db, fcm, logger)); err != nil {
 			logger.Error("consumer stopped", "error", err)
 			stop()
 		}

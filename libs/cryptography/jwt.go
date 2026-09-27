@@ -18,6 +18,10 @@ func GenerateToken(userID string, email string, roleID string, expiration time.D
 }
 
 func GenerateTokenWithInstitution(userID string, email string, roleID string, institutionID string, expiration time.Duration) (string, error) {
+	return GenerateTokenWithScope(userID, email, roleID, institutionID, "", "", expiration)
+}
+
+func GenerateTokenWithScope(userID string, email string, roleID string, institutionID string, regionLevel string, regionCode string, expiration time.Duration) (string, error) {
 	now := time.Now().UTC()
 
 	claims := jwt.MapClaims{
@@ -28,6 +32,10 @@ func GenerateTokenWithInstitution(userID string, email string, roleID string, in
 	}
 	if institutionID != "" {
 		claims["institution_id"] = institutionID
+	}
+	if regionLevel != "" && regionCode != "" {
+		claims["region_level"] = regionLevel
+		claims["region_code"] = regionCode
 	}
 
 	if expiration > 0 {
@@ -99,6 +107,10 @@ func JWTMiddleware(db *gorm.DB) gin.HandlerFunc {
 		c.Set("role_id", user.RoleID.String())
 		if user.InstitutionID != nil {
 			c.Set("institution_id", user.InstitutionID.String())
+		}
+		if user.RegionLevel != "" && user.RegionCode != "" {
+			c.Set("region_level", user.RegionLevel)
+			c.Set("region_code", user.RegionCode)
 		}
 		c.Next()
 	}

@@ -710,6 +710,7 @@ definitions:
         - multiple_choice
         - essay
         - true_false
+        - fill_blank
         type: string
     required:
     - correct_answer
@@ -2018,6 +2019,12 @@ paths:
         in: formData
         items:
           type: string
+        name: files
+        type: array
+      - collectionFormat: csv
+        in: formData
+        items:
+          type: string
         minItems: 1
         name: learning_group_ids
         required: true
@@ -2036,7 +2043,7 @@ paths:
         name: uploaded_user_id
         required: true
         type: string
-      - description: Learning resource file
+      - description: Learning resource file (max 8 MB each)
         in: formData
         name: file
         type: file
@@ -2087,7 +2094,19 @@ paths:
         in: formData
         items:
           type: string
+        name: files
+        type: array
+      - collectionFormat: csv
+        in: formData
+        items:
+          type: string
         name: learning_group_ids
+        type: array
+      - collectionFormat: csv
+        in: formData
+        items:
+          type: string
+        name: old_file_ids
         type: array
       - in: formData
         name: title
@@ -2101,7 +2120,7 @@ paths:
       - in: formData
         name: uploaded_user_id
         type: string
-      - description: Replacement learning resource file
+      - description: Replacement learning resource file (max 8 MB each)
         in: formData
         name: file
         type: file

@@ -20,6 +20,8 @@ func RegisterAllModules(router *gin.Engine, logger *slog.Logger) {
 		path := c.Param("path")
 		target := helpers.ConfigString("CORE_SERVICE_URL", "http://localhost:3002")
 		switch {
+		case strings.HasPrefix(path, "/dashboard"):
+			target = helpers.ConfigString("DASHBOARD_SERVICE_URL", "http://localhost:3008")
 		case strings.HasPrefix(path, "/auth/"):
 			target = helpers.ConfigString("AUTH_SERVICE_URL", "http://localhost:3001")
 		case isLearningRoute(path):
@@ -91,6 +93,9 @@ func isPublicRoute(method, path string) bool {
 	if strings.HasPrefix(path, "/auth/") {
 		return true
 	}
+	if method == http.MethodGet && (path == "/legal-documents" || strings.HasPrefix(path, "/legal-documents/")) {
+		return true
+	}
 	return method == http.MethodGet && (path == "/roles/master-permissions" || path == "/users/template-excel")
 }
 
@@ -106,7 +111,7 @@ func authorize(c *gin.Context) bool {
 		return false
 	}
 	c.Request.Header.Set("Authorization", "Bearer "+tokenString)
-	for claim, header := range map[string]string{"user_id": "X-User-ID", "institution_id": "X-Institution-ID", "role_id": "X-Role-ID"} {
+	for claim, header := range map[string]string{"user_id": "X-User-ID", "institution_id": "X-Institution-ID", "role_id": "X-Role-ID", "region_level": "X-Region-Level", "region_code": "X-Region-Code"} {
 		if value, ok := claims[claim].(string); ok {
 			c.Request.Header.Set(header, value)
 		}

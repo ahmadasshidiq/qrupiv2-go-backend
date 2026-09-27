@@ -31,8 +31,15 @@ func (s *QuizService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 
 	// filters
 	params["q.deleted_at.isnull"] = ""
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
+		params["q.institution_id"] = institutionID
+	}
+	scopeJoin, err := s.viewerScope(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	baseQuery := `
+	baseQuery := fmt.Sprintf(`
 		select
 			q.*,
 			i.name as institution_name,
@@ -48,7 +55,8 @@ func (s *QuizService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 		join learning_groups lg on lg.id = q.learning_group_id
 		join users u on u.id = q.created_user_id
 		left join quiz_sessions qs on qs.quiz_id = q.id and qs.status = 'submitted'
-	`
+		%s
+	`, scopeJoin)
 
 	result, err := helpers.BuildPaginatedQuery(
 		ctx,
@@ -66,6 +74,38 @@ func (s *QuizService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 	}
 
 	return result, nil
+}
+
+func (s *QuizService) viewerScope(ctx *gin.Context) (string, error) {
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		return "", nil
+	}
+	var user models.User
+	if err := s.DB.Select("type").First(&user, "id = ?", userID).Error; err != nil {
+		return "", err
+	}
+	if user.Type != "teacher" && user.Type != "student" {
+		return "", nil
+	}
+	id, err := uuid.Parse(userID)
+	if err != nil {
+		return "", errors.New("invalid authenticated user id")
+	}
+	if user.Type == "student" {
+		return fmt.Sprintf(`join (select distinct q_scope.id
+			from quizzes q_scope
+			join learning_group_members quiz_lgm on quiz_lgm.learning_group_id = q_scope.learning_group_id
+				and quiz_lgm.user_id = '%s' and quiz_lgm.deleted_at is null
+		) quiz_scope on quiz_scope.id = q.id`, id), nil
+	}
+	return fmt.Sprintf(`join (select q_scope.id
+		from quizzes q_scope where q_scope.created_user_id = '%s'
+		union
+		select q_scope.id from quizzes q_scope
+		join learning_group_members quiz_lgm on quiz_lgm.learning_group_id = q_scope.learning_group_id
+			and quiz_lgm.user_id = '%s' and quiz_lgm.deleted_at is null
+	) quiz_scope on quiz_scope.id = q.id`, id, id), nil
 }
 
 func (s *QuizService) getByID(id string) (*models.Quiz, error) {

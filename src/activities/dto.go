@@ -1,6 +1,7 @@
 package activities
 
 import (
+	"github.com/google/uuid"
 	"time"
 
 	"clasenna-go-backend/libs/models"
@@ -11,6 +12,28 @@ type DefaultFindDTO struct {
 	SortOrder string `form:"sortOrder" binding:"omitempty,oneof=asc desc"`
 	Limit     int    `form:"limit" binding:"omitempty,min=1"`
 	Page      int    `form:"page" binding:"omitempty,min=1"`
+}
+
+type ActivityLimitStatusDTO struct {
+	Date string `form:"date" binding:"required,datetime=2006-01-02"`
+}
+
+type ActivityLimitStatus struct {
+	ActivityItemID uuid.UUID `json:"activity_item_id"`
+	Name           string    `json:"name"`
+	DailyLimit     int       `json:"daily_limit"`
+	DailyUsed      int64     `json:"daily_used"`
+	PeriodLimit    int       `json:"period_limit"`
+	PeriodUsed     int64     `json:"period_used"`
+	PeriodType     string    `json:"period_type"`
+	Locked         bool      `json:"locked"`
+	Reason         string    `json:"reason,omitempty"`
+}
+
+type BulkActivityLimitStatus struct {
+	UserID   string                `json:"user_id"`
+	UserName string                `json:"user_name"`
+	Items    []ActivityLimitStatus `json:"items"`
 }
 
 type ChartFilterDTO struct {
@@ -61,8 +84,9 @@ type BulkActivityEntry struct {
 }
 
 type BulkCreateResult struct {
-	Count int      `json:"count"`
-	IDs   []string `json:"ids"`
+	Count   int                   `json:"count"`
+	IDs     []string              `json:"ids"`
+	Skipped []BulkValidationError `json:"skipped,omitempty"`
 }
 
 type BulkJobResult struct {

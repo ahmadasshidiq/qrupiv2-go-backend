@@ -1,13 +1,9 @@
 package dashboard
 
-import (
-	"clasenna-go-backend/libs/cryptography"
+import "github.com/gin-gonic/gin"
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
-)
-
-func RegisterDashboardModule(router *gin.RouterGroup, db *gorm.DB) {
+func RegisterDashboardModule(router *gin.RouterGroup, service *Aggregator) {
+	controller := &DashboardController{Service: service}
 	group := router.Group("/dashboard")
-	group.Use(cryptography.JWTMiddleware(db))
+	group.GET("", controller.Overview)
 }

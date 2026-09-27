@@ -33,6 +33,34 @@ func (c *ActivityController) GetAll(x *gin.Context) {
 	helpers.RespondSuccess(x, "activities", 200, v)
 }
 
+func (c *ActivityController) GetLimitStatuses(x *gin.Context) {
+	var dto ActivityLimitStatusDTO
+	if err := x.ShouldBindQuery(&dto); err != nil {
+		helpers.RespondError(x, "activities", http.StatusBadRequest, err)
+		return
+	}
+	data, err := c.Service.getLimitStatuses(x, dto.Date)
+	if err != nil {
+		helpers.RespondError(x, "activities", http.StatusInternalServerError, err)
+		return
+	}
+	helpers.RespondSuccess(x, "activities", http.StatusOK, data)
+}
+
+func (c *ActivityController) GetBulkLimitStatuses(x *gin.Context) {
+	date := x.Query("date")
+	if date == "" {
+		helpers.RespondError(x, "activities", http.StatusBadRequest, errors.New("date is required"))
+		return
+	}
+	data, err := c.Service.getBulkLimitStatuses(x, date, x.Query("learning_group_id"), x.QueryArray("user_ids"))
+	if err != nil {
+		helpers.RespondError(x, "activities", http.StatusBadRequest, err)
+		return
+	}
+	helpers.RespondSuccess(x, "activities", http.StatusOK, data)
+}
+
 // @Summary      Get activity chart data
 // @Description  Returns activity chart aggregations scoped to the authenticated institution
 // @Tags         Activity API
@@ -116,7 +144,12 @@ func (c *ActivityController) CreateBulk(x *gin.Context) {
 		helpers.RespondSuccess(x, "activities", http.StatusAccepted, result)
 		return
 	}
-	result, err := c.Service.createBulk(dto)
+	institutionID, err := parseOptionalUUID(x.GetString("institution_id"))
+	if err != nil {
+		helpers.RespondError(x, "activities", http.StatusBadRequest, errors.New("invalid institution context"))
+		return
+	}
+	result, err := c.Service.createBulk(dto, institutionID)
 	if err != nil {
 		var validationError *BulkValidationError
 		if errors.As(err, &validationError) {

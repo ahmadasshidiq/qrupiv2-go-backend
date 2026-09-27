@@ -241,7 +241,7 @@ func processActivityBulkJob(ctx context.Context, db *gorm.DB, jobID uuid.UUID, m
 		if err := json.Unmarshal(job.Payload, &dto); err != nil {
 			return &BulkValidationError{Index: -1, Field: "payload", Message: err.Error()}
 		}
-		result, err := (&ActivityService{DB: tx}).createBulk(dto)
+		result, err := (&ActivityService{DB: tx}).createBulk(dto, job.InstitutionID)
 		if err != nil {
 			return err
 		}

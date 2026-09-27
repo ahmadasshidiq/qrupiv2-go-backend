@@ -4,4 +4,5 @@ var Models = []interface{}{
 	&Institution{},
 	&Role{},
 	&User{},
+	&LegalDocument{},
 }

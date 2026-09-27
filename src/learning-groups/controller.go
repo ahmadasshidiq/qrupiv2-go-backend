@@ -41,7 +41,7 @@ func (c *LearningGroupController) GetAll(ctx *gin.Context) {
 // @Security BearerAuth
 // @Router /learning-groups/{id} [get]
 func (c *LearningGroupController) GetByID(ctx *gin.Context) {
-	data, err := c.Service.getByID(ctx.Param("id"))
+	data, err := c.Service.getByIDForUser(ctx, ctx.Param("id"))
 	if err != nil {
 		helpers.RespondError(ctx, "learning-groups", http.StatusInternalServerError, err)
 		return

@@ -22,7 +22,9 @@ const (
 
 const (
 	EventTypeAttendanceCreated EventType = "attendance.created"
+	EventTypeActivityCreated   EventType = "activity.created"
 	EventTypeQuizCreated       EventType = "quiz.created"
+	EventTypeResourceCreated   EventType = "learning_resource.created"
 	EventTypeMaterialCreated   EventType = "material.created"
 	EventTypeLoginDetected     EventType = "auth.login_detected"
 	EventTypeUserCreated       EventType = "user.created"
@@ -42,6 +44,10 @@ type Event struct {
 	UserID        string                 `json:"user_id,omitempty"`
 	ActorID       string                 `json:"actor_id,omitempty"`
 	Data          map[string]interface{} `json:"data,omitempty"`
+	EntityID      string                 `json:"entity_id,omitempty"`
+	Deeplink      string                 `json:"deeplink,omitempty"`
+	WebURL        string                 `json:"web_url,omitempty"`
+	MobileRoute   string                 `json:"mobile_route,omitempty"`
 	CreatedAt     time.Time              `json:"created_at"`
 }
 

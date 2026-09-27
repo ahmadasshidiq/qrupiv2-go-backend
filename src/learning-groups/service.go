@@ -4,6 +4,8 @@ import (
 	"clasenna-go-backend/libs/helpers"
 	"clasenna-go-backend/libs/models"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -29,27 +31,54 @@ func (s *LearningGroupService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*he
 
 	// filters
 	params["lg.deleted_at.isnull"] = ""
+	memberUserID, isMember, err := s.authenticatedMemberID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" && !s.isSuperAdmin(ctx) {
+		params["lg.institution_id"] = institutionID
+	}
 
-	baseQuery := `
+	memberJoin := ""
+	studentJoin := "left join learning_group_members student_lgm on student_lgm.learning_group_id = lg.id and student_lgm.role_in_group = 'student' and student_lgm.deleted_at is null"
+	groupBy := "group by lg.id, i.name, student_lgm.user_id"
+	if isMember {
+		// Restrict the join itself to the authenticated member. An unrestricted
+		// join would multiply each learning group by all of its members.
+		memberID, parseErr := uuid.Parse(memberUserID)
+		if parseErr != nil {
+			return nil, errors.New("invalid authenticated user id")
+		}
+		memberJoin = fmt.Sprintf("join learning_group_members member_scope_lgm on member_scope_lgm.learning_group_id = lg.id and member_scope_lgm.user_id = '%s' and member_scope_lgm.deleted_at is null", memberID.String())
+	} else {
+		// Admin melihat satu baris per grup. Join seluruh siswa akan
+		// menggandakan grup berdasarkan jumlah anggotanya.
+		studentJoin = "left join learning_group_members student_lgm on false"
+	}
+
+	baseQuery := fmt.Sprintf(`
 		select
 			lg.*,
+			student_lgm.user_id as student_member_user_id,
 			i.name as institution_name,
 			string_agg(u.name, ', ') as instructor_name
 		from learning_groups lg
 		join institutions i on i.id = lg.institution_id
-		left join learning_group_members lgm on lgm.learning_group_id = lg.id and role_in_group = 'instructor'
+		%s
+		%s
+		left join learning_group_members lgm on lgm.learning_group_id = lg.id and lgm.role_in_group = 'instructor' and lgm.deleted_at is null
 		left join users u on u.id = lgm.user_id
-	`
+	`, studentJoin, memberJoin)
 
 	result, err := helpers.BuildPaginatedQuery(
 		ctx,
-		s.DB,                     // DB
-		params,                   // filter
-		"learning_groups",        // table name
-		baseQuery,                // optional base query
-		"group by lg.id, i.name", // optional query group by
-		"",                       // optional select fields
-		dto.SortBy,               // optional default sort
+		s.DB,              // DB
+		params,            // filter
+		"learning_groups", // table name
+		baseQuery,         // optional base query
+		groupBy,           // optional query group by
+		"",                // optional select fields
+		dto.SortBy,        // optional default sort
 	)
 
 	if err != nil {
@@ -59,6 +88,12 @@ func (s *LearningGroupService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*he
 	return result, nil
 }
 
+func (s *LearningGroupService) isSuperAdmin(ctx *gin.Context) bool {
+	var roleName string
+	s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&roleName)
+	return helpers.IsRole(roleName, "super_admin")
+}
+
 func (s *LearningGroupService) getByID(id string) (*models.LearningGroup, error) {
 	var data models.LearningGroup
 	err := s.DB.Preload("Institution").First(&data, "id = ?", id).Error
@@ -66,6 +101,42 @@ func (s *LearningGroupService) getByID(id string) (*models.LearningGroup, error)
 		return nil, nil
 	}
 	return &data, err
+}
+
+func (s *LearningGroupService) getByIDForUser(ctx *gin.Context, id string) (*models.LearningGroup, error) {
+	query := s.DB.Where("learning_groups.id = ?", id)
+	memberUserID, isMember, err := s.authenticatedMemberID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if isMember {
+		query = query.Joins("JOIN learning_group_members member_scope_lgm ON member_scope_lgm.learning_group_id = learning_groups.id AND member_scope_lgm.user_id = ? AND member_scope_lgm.deleted_at IS NULL", memberUserID)
+	}
+	var data models.LearningGroup
+	err = query.Preload("Institution").First(&data).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &data, err
+}
+
+func (s *LearningGroupService) authenticatedMemberID(ctx *gin.Context) (string, bool, error) {
+	userID := ctx.GetString("user_id")
+	if userID == "" {
+		return "", false, errors.New("user_id is missing from authenticated session")
+	}
+
+	// Scope is based on users.type, not the display/configurable role name.
+	// This keeps "Guru"/"Instructor" role labels from bypassing member scope.
+	var user models.User
+	if err := s.DB.Select("type").First(&user, "id = ?", userID).Error; err != nil {
+		return "", false, err
+	}
+	userType := strings.ToLower(strings.TrimSpace(user.Type))
+	if userType != "student" && userType != "teacher" {
+		return "", false, nil
+	}
+	return userID, true, nil
 }
 
 func (s *LearningGroupService) create(dto CreateDTO) (*models.LearningGroup, error) {

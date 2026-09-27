@@ -131,7 +131,7 @@ func (s *AuthService) StudentVerifyPin(ctx context.Context, dto StudentVerifyPin
 	}
 
 	institutionID := data.InstitutionID.String()
-	token, err := cryptography.GenerateTokenWithInstitution(data.ID.String(), data.Email, data.RoleID.String(), institutionID, 12*time.Hour)
+	token, err := cryptography.GenerateTokenWithScope(data.ID.String(), data.Email, data.RoleID.String(), institutionID, data.RegionLevel, data.RegionCode, 12*time.Hour)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func (s *AuthService) Login(ctx context.Context, dto LoginDTO, correlationID str
 	if data.InstitutionID != nil {
 		institutionID = data.InstitutionID.String()
 	}
-	token, err := cryptography.GenerateTokenWithInstitution(data.ID.String(), data.Email, data.RoleID.String(), institutionID, expiration)
+	token, err := cryptography.GenerateTokenWithScope(data.ID.String(), data.Email, data.RoleID.String(), institutionID, data.RegionLevel, data.RegionCode, expiration)
 	if err != nil {
 		return nil, err
 	}
@@ -198,15 +198,44 @@ func (s *AuthService) Login(ctx context.Context, dto LoginDTO, correlationID str
 	if err := s.DB.Preload("Role").Preload("Institution").First(&data, "id = ?", data.ID).Error; err != nil {
 		return nil, err
 	}
+	roleName := ""
+	permissions := []models.PermissionItem{}
+	if data.Role != nil {
+		roleName = data.Role.Name
+		if len(data.Role.Permissions) > 0 {
+			if err := json.Unmarshal(data.Role.Permissions, &permissions); err != nil {
+				return nil, fmt.Errorf("invalid permission data: %w", err)
+			}
+		}
+	}
+	var role interface{}
+	if data.Role != nil {
+		role = map[string]interface{}{
+			"id":          data.Role.ID,
+			"name":        data.Role.Name,
+			"permissions": permissions,
+		}
+	}
+	var institution interface{}
+	if data.Institution != nil {
+		institution = map[string]interface{}{
+			"id":         data.Institution.ID,
+			"name":       data.Institution.Name,
+			"avatar_url": data.Institution.AvatarURL,
+			"code":       data.Institution.Code,
+			"status":     data.Institution.Status,
+		}
+	}
 
 	res := map[string]interface{}{
 		"id":                 data.ID,
 		"name":               data.Name,
 		"email":              data.Email,
-		"role":               data.RoleID,
+		"role":               role,
+		"permissions":        permissions,
 		"type":               data.Type,
 		"avatar_profile_url": data.AvatarURL,
-		"institution":        data.Institution,
+		"institution":        institution,
 		"token":              token,
 	}
 	if s.Events != nil {
@@ -216,11 +245,6 @@ func (s *AuthService) Login(ctx context.Context, dto LoginDTO, correlationID str
 	}
 
 	if s.Notifier != nil {
-		roleName := ""
-		if data.Role != nil {
-			roleName = data.Role.Name
-		}
-
 		institutionName := ""
 		if data.Institution != nil {
 			institutionName = data.Institution.Name
