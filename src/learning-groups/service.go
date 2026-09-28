@@ -39,13 +39,14 @@ func (s *LearningGroupService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*he
 	}
 
 	memberJoin := ""
-	studentJoin := "left join learning_group_members student_lgm on student_lgm.learning_group_id = lg.id and student_lgm.role_in_group = 'student' and student_lgm.deleted_at is null"
+	studentJoin := ""
 	groupBy := "group by lg.id, i.name, student_lgm.user_id"
 	if isMember {
 		memberID, parseErr := uuid.Parse(memberUserID)
 		if parseErr != nil {
 			return nil, errors.New("invalid authenticated user id")
 		}
+		studentJoin = fmt.Sprintf("left join learning_group_members student_lgm on student_lgm.learning_group_id = lg.id and student_lgm.role_in_group = 'student' and student_lgm.user_id = '%s' and student_lgm.deleted_at is null", memberID.String())
 		memberJoin = fmt.Sprintf("join learning_group_members member_scope_lgm on member_scope_lgm.learning_group_id = lg.id and member_scope_lgm.user_id = '%s' and member_scope_lgm.deleted_at is null", memberID.String())
 	} else {
 		studentJoin = "left join learning_group_members student_lgm on false"
@@ -67,13 +68,13 @@ func (s *LearningGroupService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*he
 
 	result, err := helpers.BuildPaginatedQuery(
 		ctx,
-		s.DB,              // DB
-		params,            // filter
-		"learning_groups", // table name
-		baseQuery,         // optional base query
-		groupBy,           // optional query group by
-		"",                // optional select fields
-		dto.SortBy,        // optional default sort
+		s.DB,
+		params,
+		"learning_groups",
+		baseQuery,
+		groupBy,
+		"",
+		dto.SortBy,
 	)
 
 	if err != nil {
