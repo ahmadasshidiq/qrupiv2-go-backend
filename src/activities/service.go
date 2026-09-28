@@ -172,7 +172,7 @@ func (s *ActivityService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers
 	if err != nil {
 		return nil, err
 	}
-	base := fmt.Sprintf(`select a.id, a.item_id as activity_item_id, a.user_id, a.learning_group_id,
+	base := fmt.Sprintf(`select a.id, COALESCE(a.institution_id, u.institution_id) as institution_id, i.name as institution_name, a.item_id as activity_item_id, a.user_id, a.learning_group_id,
 		a.recorded_user_id, a.description, a.point_value, a.platform, a.occurred_at,
 		a.created_at, a.updated_at, ai.name as activity_item_name, ai.type as activity_item_type,
 		ac.id as category_id, ac.name as category_name, u.name as user_name,
@@ -183,6 +183,7 @@ func (s *ActivityService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers
 		join users u on u.id = a.user_id
 		join users ru on ru.id = a.recorded_user_id
 		left join learning_groups lg on lg.id = a.learning_group_id
+		left join institutions i on i.id = COALESCE(a.institution_id, u.institution_id)
 		%s`, teacherWhere)
 	return helpers.BuildPaginatedQuery(ctx, s.DB, params, "activities", base, "", "", dto.SortBy)
 }

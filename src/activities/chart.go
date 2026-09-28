@@ -36,6 +36,12 @@ type TopStudent struct {
 	TotalPoints     int64     `json:"total_points"`
 }
 
+type TopTeacher struct {
+	UserID          uuid.UUID `json:"user_id"`
+	UserName        string    `json:"user_name"`
+	TotalActivities int64     `json:"total_activities"`
+}
+
 type DailyActivityTrend struct {
 	Date                string `json:"date"`
 	PositiveActivities  int64  `json:"positive_activities"`
@@ -47,6 +53,7 @@ type ActivityChartResponse struct {
 	ActivitiesByItem          []ActivitiesByItem          `json:"activities_by_item"`
 	ActivitiesByLearningGroup []ActivitiesByLearningGroup `json:"activities_by_learning_group"`
 	TopStudents               []TopStudent                `json:"top_students"`
+	TopTeachers               []TopTeacher                `json:"top_teachers"`
 	DailyTrend                []DailyActivityTrend        `json:"daily_trend"`
 }
 
@@ -70,6 +77,7 @@ func (s *ActivityService) getChart(ctx *gin.Context, dto ChartFilterDTO) (*Activ
 		ActivitiesByItem:          make([]ActivitiesByItem, 0),
 		ActivitiesByLearningGroup: make([]ActivitiesByLearningGroup, 0),
 		TopStudents:               make([]TopStudent, 0),
+		TopTeachers:               make([]TopTeacher, 0),
 		DailyTrend:                make([]DailyActivityTrend, 0),
 	}
 	dbCtx := ctx.Request.Context()
@@ -80,6 +88,17 @@ func (s *ActivityService) getChart(ctx *gin.Context, dto ChartFilterDTO) (*Activ
 			COUNT(*) FILTER (WHERE ai.type = 'violation') AS violation_activities,
 			COALESCE(SUM(a.point_value), 0) AS total_points`).
 		Scan(&result.Summary).Error; err != nil {
+		return nil, err
+	}
+
+	if err := activityChartQuery(s.DB.WithContext(dbCtx), filter).
+		Select(`ru.id AS user_id, ru.name AS user_name, COUNT(*) AS total_activities`).
+		Where("ru.id IS NOT NULL").
+		Where("a.platform ILIKE ?", "%teacher%").
+		Group("ru.id, ru.name").
+		Order("total_activities DESC, ru.name ASC").
+		Limit(filter.topLimit).
+		Scan(&result.TopTeachers).Error; err != nil {
 		return nil, err
 	}
 
@@ -175,6 +194,7 @@ func activityChartQuery(db *gorm.DB, filter parsedChartFilter) *gorm.DB {
 		Joins("JOIN activity_items ai ON ai.id = a.item_id AND ai.deleted_at IS NULL").
 		Joins("LEFT JOIN activity_categories ac ON ac.id = ai.category_id AND ac.deleted_at IS NULL").
 		Joins("JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL").
+		Joins("LEFT JOIN users ru ON ru.id = a.recorded_user_id AND ru.deleted_at IS NULL").
 		Joins("LEFT JOIN learning_groups lg ON lg.id = a.learning_group_id AND lg.deleted_at IS NULL").
 		Where("a.deleted_at IS NULL").
 		Where("u.institution_id = ?", filter.institutionID)

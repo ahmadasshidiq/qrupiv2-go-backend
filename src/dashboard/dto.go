@@ -7,12 +7,23 @@ type OverviewDTO struct {
 }
 
 type Response struct {
-	Role      string         `json:"role"`
-	RoleLabel string         `json:"role_label"`
 	Cached    bool           `json:"cached"`
 	Generated string         `json:"generated_at"`
 	Summary   map[string]any `json:"summary"`
-	Rankings  []any          `json:"rankings"`
-	Alerts    []any          `json:"alerts"`
+	Rankings  []any          `json:"rankings,omitempty"`
 	Data      map[string]any `json:"data"`
+}
+
+var roleAliases = map[string]string{
+	"super-admin":       "super_admin",
+	"super_admin":       "super_admin",
+	"institution-admin": "institution_admin",
+	"institution_admin": "institution_admin",
+	"school-admin":      "institution_admin",
+	"school_admin":      "institution_admin",
+	"instructor":        "instructor",
+	"teacher":           "instructor",
+	"student":           "student",
+	"dinas-pendidikan":  "dinas_pendidikan",
+	"dinas_pendidikan":  "dinas_pendidikan",
 }
