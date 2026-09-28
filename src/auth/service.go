@@ -164,7 +164,6 @@ func (s *AuthService) Login(ctx context.Context, dto LoginDTO, correlationID str
 		return nil, errors.New("invalid encryption layer")
 	}
 
-	// Decrypt password from user data
 	decrypted := cryptography.PolyalphabetDecrypt(data.Password, data.LayerTwo)
 	decrypted = cryptography.VigenereDecrypt(decrypted, layerOne)
 
@@ -172,7 +171,6 @@ func (s *AuthService) Login(ctx context.Context, dto LoginDTO, correlationID str
 		return nil, errors.New("invalid email or password")
 	}
 
-	// Generate JWT token
 	var expiration time.Duration
 	if dto.RememberMe {
 		expiration = 0 // no expiry
@@ -189,7 +187,6 @@ func (s *AuthService) Login(ctx context.Context, dto LoginDTO, correlationID str
 		return nil, err
 	}
 
-	// Save token to DB
 	data.CurrentToken = token
 	if err := s.DB.Save(&data).Error; err != nil {
 		return nil, err

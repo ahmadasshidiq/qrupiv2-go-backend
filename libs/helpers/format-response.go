@@ -22,11 +22,9 @@ type ErrorResponse struct {
 }
 
 func FormatResponse(method, modelName string, statusCode int, data interface{}, totalData *int64, err error) gin.H {
-	// Capitalize only the first letter of the method
 	method = strings.ToUpper(string(method[0])) + strings.ToLower(method[1:])
 
 	if err != nil || statusCode < 200 || statusCode >= 300 {
-		// Return standardized error response
 		errorResp := gin.H{
 			"status":  "error",
 			"message": fmt.Sprintf("%s data %s unsuccessfully", method, modelName),
@@ -45,7 +43,6 @@ func FormatResponse(method, modelName string, statusCode int, data interface{}, 
 		return errorResp
 	}
 
-	// Success response
 	resp := gin.H{
 		"status":  "success",
 		"message": fmt.Sprintf("%s data %s successfully", method, modelName),

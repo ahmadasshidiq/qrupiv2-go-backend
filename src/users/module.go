@@ -14,7 +14,6 @@ func RegisterUserModule(router *gin.RouterGroup, db *gorm.DB, publishers ...Even
 
 	group := router.Group("/users")
 
-	// with out security
 	group.GET("/template-excel", controller.DownloadTemplateExcel)
 
 	group.Use(cryptography.JWTMiddleware(db))

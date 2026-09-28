@@ -56,7 +56,6 @@ func uploadLearningResourceFiles(ctx *gin.Context, institutionID string) ([]stri
 func deleteLearningResourceFiles(urls []string) {
 	publicPrefix := strings.TrimSuffix(stores.MinioPublicURL, "/") + "/" + os.Getenv("MINIO_PRODUCT_BUCKET") + "/"
 	for _, url := range urls {
-		// Do not try to delete external resources such as YouTube links.
 		if url != "" && strings.HasPrefix(url, publicPrefix) {
 			stores.DeleteMinioFiles(os.Getenv("MINIO_PRODUCT_BUCKET"), url)
 		}
@@ -92,8 +91,6 @@ func (s *LearningResourceService) getAll(ctx *gin.Context, dto DefaultFindDTO) (
 		params["i.id"] = institutionID
 	}
 	viewerJoin := "left join learning_group_members viewer_lgm on viewer_lgm.learning_group_id = lrg.learning_group_id and viewer_lgm.deleted_at is null"
-	// Admin melihat seluruh resource. Jangan join seluruh anggota group ke alias
-	// viewer_lgm karena satu resource akan menjadi satu baris per anggota group.
 	if !helpers.IsRole(role, "student") && !helpers.IsRole(role, "instructor") {
 		viewerJoin = "left join learning_group_members viewer_lgm on false"
 	}
@@ -247,12 +244,7 @@ func (s *LearningResourceService) update(ctx *gin.Context, id string, dto Update
 	if dto.Type != nil {
 		data.Type = models.LearningResourceType(*dto.Type)
 	}
-	// An empty files field can be produced by multipart binding when no file
-	// links were sent. Keep the existing links in that case.
 	if dto.Files != nil && len(*dto.Files) > 0 {
-		// When files is sent, it represents the final list of external URLs.
-		// Do not merge it with the old list, otherwise every update can append
-		// the same URL again.
 		if len(oldFileIDs) == 0 {
 			fileURLs = nil
 		}

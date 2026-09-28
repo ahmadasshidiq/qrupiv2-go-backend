@@ -114,12 +114,10 @@ func PolyalphabetDecrypt(ciphertext string, key string) string {
 		}
 
 		if indexCiphertext != -1 {
-			// Menggunakan kunci untuk membalikkan perubahan
 			shift := i % len(key)
 			newIndex := (indexCiphertext - shift + len(domData)) % len(domData)
 			plaintext.WriteRune(domData[newIndex])
 		} else {
-			// Jika karakter tidak ditemukan dalam domData, masukkan langsung
 			plaintext.WriteRune(letter)
 		}
 	}

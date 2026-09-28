@@ -54,7 +54,6 @@ func (s *ExportService) buildQuery(dto ExportDTO, filters []FilterDTO) (string, 
 	for _, col := range dto.Columns {
 		parts := strings.Split(col.Key, ".")
 
-		// CASE 1: Kolom langsung di baseTable
 		if len(parts) == 1 && (col.Table == nil || *col.Table == "") {
 			selects = append(selects,
 				fmt.Sprintf("%s.%s as \"%s\"", baseTable, parts[0], col.Label),
@@ -62,7 +61,6 @@ func (s *ExportService) buildQuery(dto ExportDTO, filters []FilterDTO) (string, 
 			continue
 		}
 
-		// CASE 2: Join tabel lain
 		if len(parts) == 1 && col.Table != nil && *col.Table != "" {
 			alias := parts[0]
 			if col.Alias != nil && *col.Alias != "" {
@@ -86,7 +84,6 @@ func (s *ExportService) buildQuery(dto ExportDTO, filters []FilterDTO) (string, 
 			continue
 		}
 
-		// CASE 3: Nested join
 		previousTable := baseTable
 		for i := 0; i < len(parts)-1; i++ {
 			currentTable := parts[i]
@@ -166,13 +163,11 @@ func (s *ExportService) generateExcel(dto ExportDTO, data []map[string]interface
 	f := excelize.NewFile()
 	sheet := "Sheet1"
 
-	// Title Style
 	titleStyle, _ := f.NewStyle(&excelize.Style{
 		Font:      &excelize.Font{Bold: true, Size: 14},
 		Alignment: &excelize.Alignment{Horizontal: "center"},
 	})
 
-	// Header Style
 	headerStyle, _ := f.NewStyle(&excelize.Style{
 		Font:      &excelize.Font{Bold: true, Color: "#FFFFFF"},
 		Fill:      excelize.Fill{Type: "pattern", Color: []string{"#010066"}, Pattern: 1},
@@ -185,12 +180,10 @@ func (s *ExportService) generateExcel(dto ExportDTO, data []map[string]interface
 		},
 	})
 
-	// Zebra Row Style
 	altRowStyle, _ := f.NewStyle(&excelize.Style{
 		Fill: excelize.Fill{Type: "pattern", Color: []string{"#F2F2F2"}, Pattern: 1},
 	})
 
-	// Title
 	if dto.Title != "" {
 		titleRange, _ := excelize.CoordinatesToCellName(1, 1)
 		endCell, _ := excelize.CoordinatesToCellName(len(dto.Columns), 1)
@@ -200,34 +193,29 @@ func (s *ExportService) generateExcel(dto ExportDTO, data []map[string]interface
 		f.SetRowHeight(sheet, 1, 28)
 	}
 
-	// Header (start from row 2)
 	for i, col := range dto.Columns {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 2)
 		f.SetCellValue(sheet, cell, col.Label)
 		f.SetCellStyle(sheet, cell, cell, headerStyle)
 	}
 
-	// Data (start from row 3)
 	for r, row := range data {
 		for c, col := range dto.Columns {
 			cell, _ := excelize.CoordinatesToCellName(c+1, r+3)
 			val := row[col.Label]
 			f.SetCellValue(sheet, cell, val)
 
-			// Zebra style
 			if r%2 == 1 {
 				f.SetCellStyle(sheet, cell, cell, altRowStyle)
 			}
 		}
 	}
 
-	// Auto Width
 	for i := range dto.Columns {
 		colLetter, _ := excelize.ColumnNumberToName(i + 1)
 		f.SetColWidth(sheet, colLetter, colLetter, 20)
 	}
 
-	// Freeze header row (row 2)
 	_ = f.SetPanes(sheet, &excelize.Panes{
 		Freeze:      true,
 		Split:       true,
@@ -237,7 +225,6 @@ func (s *ExportService) generateExcel(dto ExportDTO, data []map[string]interface
 		ActivePane:  "bottomLeft",
 	})
 
-	// Generate filename
 	filename := dto.Filename
 	if filename == "" {
 		filename = fmt.Sprintf("export_%d", time.Now().Unix())

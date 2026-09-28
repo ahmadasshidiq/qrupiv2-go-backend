@@ -101,7 +101,6 @@ func BuildDynamicWhereClause(filters map[string]interface{}) WhereClauseResult {
 			where += fmt.Sprintf(" and lower(%s) %s lower(?)", field, sqlOp)
 			params = append(params, fmt.Sprintf("%%%v%%", value))
 		default:
-			// automatic clock logic for gte, gt, lte, lt
 			if op == "gte" || op == "gt" || op == "lte" || op == "lt" {
 				if strVal, ok := value.(string); ok && len(strVal) == 10 {
 					switch op {

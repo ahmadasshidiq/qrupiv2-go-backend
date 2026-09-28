@@ -14,7 +14,6 @@ func RegisterRoleModule(router *gin.RouterGroup, db *gorm.DB) {
 
 	group := router.Group("/roles")
 
-	// with out security
 	group.GET("/master-permissions", controller.GetMasterPermissions)
 
 	group.Use(cryptography.JWTMiddleware(db))

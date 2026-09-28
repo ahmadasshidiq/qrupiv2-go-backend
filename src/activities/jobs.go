@@ -95,7 +95,6 @@ func (s *ActivityService) getBulkJob(id, institutionValue string) (*models.Activ
 }
 
 func StartActivityOutboxDispatcher(ctx context.Context, db *gorm.DB, producer kafkalib.Producer, topic string, logger *slog.Logger) {
-	// Check once on startup to recover events committed before a previous process stopped.
 	pending := true
 	retryDelay := time.Second
 	for {

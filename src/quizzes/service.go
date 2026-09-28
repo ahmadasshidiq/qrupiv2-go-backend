@@ -29,7 +29,6 @@ func (s *QuizService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 		}
 	}
 
-	// filters
 	params["q.deleted_at.isnull"] = ""
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
 		params["q.institution_id"] = institutionID
@@ -194,7 +193,6 @@ func (s *QuizService) update(id string, dto UpdateDTO) (*models.Quiz, error) {
 	}
 
 	if dto.Title != nil {
-		// Cek duplikat title di learning_group yang sama
 		var exists int64
 		s.DB.Model(&models.Quiz{}).
 			Where("title = ? AND learning_group_id = ? AND id != ?", *dto.Title, data.LearningGroupID, id).
@@ -227,7 +225,6 @@ func (s *QuizService) update(id string, dto UpdateDTO) (*models.Quiz, error) {
 		data.EndTime = *dto.EndTime
 	}
 
-	// Pastikan start < end
 	if !data.StartTime.Before(data.EndTime) {
 		return nil, errors.New("start_time must be before end_time")
 	}

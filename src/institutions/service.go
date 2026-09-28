@@ -35,7 +35,6 @@ func (s *InstitutionService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*help
 		}
 	}
 
-	// filters
 	params["institutions.deleted_at.isnull"] = ""
 	if level, code := ctx.GetString("region_level"), ctx.GetString("region_code"); level != "" && code != "" && !s.isSuperAdmin(ctx) {
 		column := map[string]string{"province": "institutions.province_code", "regency": "institutions.regency_code", "district": "institutions.district_code", "village": "institutions.village_code"}[level]
@@ -454,9 +453,6 @@ func (s *InstitutionService) delete(id string) (bool, error) {
 	}
 
 	if err := s.DB.Transaction(func(tx *gorm.DB) error {
-		// Institution creation also creates an administrator. Remove every user
-		// owned by the institution first because the users foreign key prevents
-		// the parent row from being permanently deleted.
 		if err := tx.Unscoped().Where("institution_id = ?", data.ID).Delete(&models.User{}).Error; err != nil {
 			return fmt.Errorf("failed to delete institution users: %w", err)
 		}

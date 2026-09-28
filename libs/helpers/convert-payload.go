@@ -72,11 +72,9 @@ func ScanRowsToMap(rows *sql.Rows) ([]map[string]interface{}, error) {
 
 			switch v := val.(type) {
 
-			// NULL → "-"
 			case nil:
 				row[col] = "-"
 
-			// []byte → string
 			case []byte:
 				var decoded interface{}
 				if len(v) > 0 && (v[0] == '[' || v[0] == '{') && json.Unmarshal(v, &decoded) == nil {
@@ -85,11 +83,9 @@ func ScanRowsToMap(rows *sql.Rows) ([]map[string]interface{}, error) {
 					row[col] = string(v)
 				}
 
-			// time.Time → formatted string
 			case time.Time:
 				row[col] = v.Format("2006-01-02 15:04:05")
 
-			// float64 → kemungkinan Excel date
 			case float64:
 				lowerCol := strings.ToLower(col)
 
@@ -103,7 +99,6 @@ func ScanRowsToMap(rows *sql.Rows) ([]map[string]interface{}, error) {
 					row[col] = v
 				}
 
-			// default
 			default:
 				row[col] = v
 			}
@@ -144,10 +139,8 @@ func ChooseString(value, fallback string) string {
 }
 
 func GenerateInstitutionCode(name string) string {
-	// Pisah nama berdasarkan spasi
 	words := strings.Fields(name)
 
-	// Ambil huruf pertama dari setiap kata
 	code := ""
 	for _, w := range words {
 		if len(w) > 0 {
@@ -155,14 +148,12 @@ func GenerateInstitutionCode(name string) string {
 		}
 	}
 
-	// Buat angka acak 4 digit
 	rand.Seed(time.Now().UnixNano())
 	num := rand.Intn(9000) + 1000 // menghasilkan 1000–9999
 
 	return code + "-" + strconv.Itoa(num)
 }
 
-// slugify singkat untuk ubah nama group jadi bentuk kode
 func slugify(input string) string {
 	re := regexp.MustCompile(`[^a-zA-Z0-9]+`)
 	slug := re.ReplaceAllString(input, "")
@@ -172,7 +163,6 @@ func slugify(input string) string {
 	return strings.ToUpper(slug)
 }
 
-// GenerateQRCode dengan nama grup, tipe, dan tanggal
 func GenerateQRCode(groupName, qrType string) string {
 	b := make([]byte, 3)
 	_, err := rand.Read(b)

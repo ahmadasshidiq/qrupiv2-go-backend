@@ -40,6 +40,5 @@ type Institution struct {
 	UpdatedAt             time.Time         `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt             gorm.DeletedAt    `gorm:"index" json:"-"`
 
-	// Relations
 	Users []User `gorm:"foreignKey:InstitutionID" json:"users,omitempty"`
 }

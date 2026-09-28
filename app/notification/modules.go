@@ -14,8 +14,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// RegisterAllModules is the notification-service HTTP module registry.
-// Channel endpoints will be registered here when required.
 func RegisterAllModules(_ *gin.RouterGroup) {}
 
 type notificationEventData struct {

@@ -9,13 +9,10 @@ import (
 func RegisterLegalDocumentModule(r *gin.RouterGroup, db *gorm.DB) {
 	c := NewController(NewService(db))
 	p := cryptography.AccessMiddleware{DB: db}
-	// Legal documents are public so clients can load Terms and Privacy
-	// pages before an authenticated session exists.
 	public := r.Group("/legal-documents")
 	public.GET("", c.GetAll)
 	public.GET("/:id", c.GetByID)
 
-	// Management operations remain protected.
 	protected := r.Group("/legal-documents")
 	protected.Use(cryptography.JWTMiddleware(db))
 	protected.POST("", p.Handler("legal-documents", "create"), c.Create)

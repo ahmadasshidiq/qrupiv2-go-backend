@@ -42,7 +42,6 @@ func NewService(db *gorm.DB, publishers ...EventPublisher) *UserService {
 	return service
 }
 
-// for public func
 func (s *UserService) CreateUser(ctx *gin.Context, dto CreateDTO) (*models.User, error) {
 	return s.create(ctx, dto)
 }
@@ -56,13 +55,11 @@ func (s *UserService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 		}
 	}
 
-	// filter
 	params["u.deleted_at.isnull"] = ""
 	if institutionID, scoped := authenticatedInstitutionID(ctx); scoped {
 		params["u.institution_id"] = institutionID
 	}
 
-	// default base query
 	baseQuery := `
 		select 
 			u.id,
@@ -152,7 +149,6 @@ func (s *UserService) create(ctx *gin.Context, dto CreateDTO) (*models.User, err
 		return nil, errors.New("email already in use")
 	}
 
-	// Generate salt
 	rand.Seed(time.Now().UnixNano())
 	layerOneSize := rand.Intn(6) + 3
 	layerTwoSize := rand.Intn(25) + 12
@@ -162,11 +158,9 @@ func (s *UserService) create(ctx *gin.Context, dto CreateDTO) (*models.User, err
 	layerTwo := cryptography.GenerateRandomString(layerTwoSize)
 	salt := cryptography.GenerateRandomString(saltSize)
 
-	// Enkripsi password
 	encodedOne := cryptography.VigenereEncrypt(dto.Password, layerOne)
 	encodedTwo := cryptography.PolyalphabetEncrypt(encodedOne, layerTwo)
 
-	// Simpan layerOne sebagai string JSON
 	layerOneStr, err := json.Marshal(layerOne)
 	if err != nil {
 		return nil, err
@@ -264,7 +258,6 @@ func (s *UserService) create(ctx *gin.Context, dto CreateDTO) (*models.User, err
 		return nil, err
 	}
 
-	// Side effects are emitted only after the database commit succeeds.
 	if s.Events != nil {
 		correlationID := ""
 		if ctx != nil {
@@ -374,7 +367,6 @@ func (s *UserService) update(ctx *gin.Context, id string, dto UpdateDTO) (*model
 	}
 	oldAvatarURL := data.AvatarURL
 
-	// Check email if found, err message already use
 	if dto.Email != nil && *dto.Email != data.Email {
 		var exists int64
 		s.DB.Model(&models.User{}).Where("email = ? and id != ?", dto.Email, id).Count(&exists)
@@ -438,7 +430,6 @@ func (s *UserService) update(ctx *gin.Context, id string, dto UpdateDTO) (*model
 	}
 
 	if dto.Password != nil {
-		// Re-generate encryption layers
 		rand.Seed(time.Now().UnixNano())
 		layerOneSize := rand.Intn(6) + 3
 		layerTwoSize := rand.Intn(25) + 12
@@ -581,7 +572,6 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		"J1": "Pilih salah satu: Active atau Inactive",
 	}
 
-	// Style header
 	headerStyle, err := f.NewStyle(&excelize.Style{
 		Font: &excelize.Font{
 			Bold:  true,
@@ -608,7 +598,6 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		return nil, err
 	}
 
-	// Tulis header + comment
 	for i, h := range headers {
 		cell, err := excelize.CoordinatesToCellName(i+1, 1)
 		if err != nil {
@@ -636,7 +625,6 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		}
 	}
 
-	// Lebar kolom
 	colWidths := map[string]float64{
 		"A": 24,
 		"B": 28,
@@ -656,11 +644,9 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		}
 	}
 
-	// Range input user
 	inputRangeStart := 2
 	inputRangeEnd := 1000
 
-	// Dropdown Role Name: Admin, Instructor, Student
 	if err := addDropdownValidation(
 		f,
 		sheet,
@@ -672,7 +658,6 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		return nil, err
 	}
 
-	// Dropdown Context Type: NIP, NIK, NIM
 	if err := addDropdownValidation(
 		f,
 		sheet,
@@ -684,7 +669,6 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		return nil, err
 	}
 
-	// Dropdown Status: Active, In Active, Graduated
 	if err := addDropdownValidation(
 		f,
 		sheet,
@@ -696,7 +680,6 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		return nil, err
 	}
 
-	// Style conditional merah untuk input tidak valid
 	invalidStyle, err := f.NewConditionalStyle(&excelize.Style{
 		Font: &excelize.Font{
 			Color: "9C0006",
@@ -712,7 +695,6 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 	}
 
 	// Email invalid: tidak kosong tapi tidak mengandung @ atau titik
-	// Contoh "ahmad" akan merah.
 	if err := f.SetConditionalFormat(
 		sheet,
 		fmt.Sprintf("B%d:B%d", inputRangeStart, inputRangeEnd),
@@ -727,7 +709,6 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		return nil, err
 	}
 
-	// Role Name invalid jika bukan Admin, Instructor, Student
 	if err := f.SetConditionalFormat(
 		sheet,
 		fmt.Sprintf("D%d:D%d", inputRangeStart, inputRangeEnd),
@@ -742,7 +723,6 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		return nil, err
 	}
 
-	// Context Type invalid jika bukan NIP, NIK, NIM
 	if err := f.SetConditionalFormat(
 		sheet,
 		fmt.Sprintf("H%d:H%d", inputRangeStart, inputRangeEnd),
@@ -757,7 +737,6 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		return nil, err
 	}
 
-	// PIN wajib 4-8 digit untuk Student.
 	if err := f.SetConditionalFormat(
 		sheet,
 		fmt.Sprintf("G%d:G%d", inputRangeStart, inputRangeEnd),
@@ -770,7 +749,6 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		return nil, err
 	}
 
-	// Status invalid jika bukan active atau inactive.
 	if err := f.SetConditionalFormat(
 		sheet,
 		fmt.Sprintf("J%d:J%d", inputRangeStart, inputRangeEnd),
@@ -785,12 +763,10 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		return nil, err
 	}
 
-	// Tambah sheet panduan
 	if err := addGuideSheet(f); err != nil {
 		return nil, err
 	}
 
-	// Freeze header
 	if err := f.SetPanes(sheet, &excelize.Panes{
 		Freeze:      true,
 		Split:       false,
@@ -802,7 +778,6 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		return nil, err
 	}
 
-	// Auto filter
 	if err := f.AutoFilter(sheet, "A1:J1", nil); err != nil {
 		return nil, err
 	}

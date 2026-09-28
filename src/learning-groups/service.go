@@ -29,7 +29,6 @@ func (s *LearningGroupService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*he
 		}
 	}
 
-	// filters
 	params["lg.deleted_at.isnull"] = ""
 	memberUserID, isMember, err := s.authenticatedMemberID(ctx)
 	if err != nil {
@@ -43,16 +42,12 @@ func (s *LearningGroupService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*he
 	studentJoin := "left join learning_group_members student_lgm on student_lgm.learning_group_id = lg.id and student_lgm.role_in_group = 'student' and student_lgm.deleted_at is null"
 	groupBy := "group by lg.id, i.name, student_lgm.user_id"
 	if isMember {
-		// Restrict the join itself to the authenticated member. An unrestricted
-		// join would multiply each learning group by all of its members.
 		memberID, parseErr := uuid.Parse(memberUserID)
 		if parseErr != nil {
 			return nil, errors.New("invalid authenticated user id")
 		}
 		memberJoin = fmt.Sprintf("join learning_group_members member_scope_lgm on member_scope_lgm.learning_group_id = lg.id and member_scope_lgm.user_id = '%s' and member_scope_lgm.deleted_at is null", memberID.String())
 	} else {
-		// Admin melihat satu baris per grup. Join seluruh siswa akan
-		// menggandakan grup berdasarkan jumlah anggotanya.
 		studentJoin = "left join learning_group_members student_lgm on false"
 	}
 
@@ -126,8 +121,6 @@ func (s *LearningGroupService) authenticatedMemberID(ctx *gin.Context) (string, 
 		return "", false, errors.New("user_id is missing from authenticated session")
 	}
 
-	// Scope is based on users.type, not the display/configurable role name.
-	// This keeps "Guru"/"Instructor" role labels from bypassing member scope.
 	var user models.User
 	if err := s.DB.Select("type").First(&user, "id = ?", userID).Error; err != nil {
 		return "", false, err

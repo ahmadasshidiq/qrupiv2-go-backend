@@ -47,7 +47,6 @@ func (m *AccessMiddleware) Handler(modelName string, action string) gin.HandlerF
 			return
 		}
 
-		// Decode JSON permissions
 		var permissions []models.PermissionItem
 		if err := json.Unmarshal(role.Permissions, &permissions); err != nil {
 			res := helpers.FormatResponse(ctx.Request.Method, "auth", http.StatusInternalServerError, "Invalid permission data", nil, err)
@@ -56,7 +55,6 @@ func (m *AccessMiddleware) Handler(modelName string, action string) gin.HandlerF
 			return
 		}
 
-		// Cek apakah permission cocok
 		allowed := false
 		for _, p := range permissions {
 			if p.Model == modelName && p.Action == action {

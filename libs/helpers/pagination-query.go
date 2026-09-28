@@ -21,8 +21,6 @@ type PaginatedResult struct {
 	Meta PaginatedMeta            `json:"meta"`
 }
 
-// UnlimitedLimit is the query limit value used by list endpoints to request
-// all matching records.
 const UnlimitedLimit = 999
 
 func BuildPaginatedQuery(
@@ -35,7 +33,6 @@ func BuildPaginatedQuery(
 	selectFields string,
 	defaultSortBy string,
 ) (*PaginatedResult, error) {
-	// Default values
 	if defaultSortBy == "" {
 		defaultSortBy = "created_at"
 	}
@@ -47,7 +44,6 @@ func BuildPaginatedQuery(
 
 	offset := (page - 1) * limit
 
-	// Extract filters
 	filters := make(map[string]interface{})
 	for k, v := range payload {
 		switch k {
@@ -60,12 +56,10 @@ func BuildPaginatedQuery(
 
 	res := BuildDynamicWhereClause(filters)
 
-	// Default select fields
 	if selectFields == "" {
 		selectFields = fmt.Sprintf("%s.*", tableName)
 	}
 
-	// Bangun base query
 	var stmtQueryBase string
 	if baseQuery == "" {
 		stmtQueryBase = fmt.Sprintf(`select %s from %s %s`, selectFields, tableName, res.Clause)
@@ -73,7 +67,6 @@ func BuildPaginatedQuery(
 		stmtQueryBase = fmt.Sprintf(`%s %s %s`, baseQuery, res.Clause, queryGroupBy)
 	}
 
-	// base query definition
 	pageClause := fmt.Sprintf("limit %d offset %d", limit, offset)
 	if limit == UnlimitedLimit {
 		pageClause = ""
@@ -93,7 +86,6 @@ func BuildPaginatedQuery(
 		) as row_data
 	`, stmtQueryBase)
 
-	// Query data
 	rows, err := DB.Raw(stmtQuery, res.Params...).Rows()
 	if err != nil {
 		return nil, fmt.Errorf("query data error: %w", err)
@@ -105,7 +97,6 @@ func BuildPaginatedQuery(
 		return nil, fmt.Errorf("scan data error: %w", err)
 	}
 
-	// Query total count
 	var total int64
 	err = DB.Raw(stmtQueryCount, res.Params...).Scan(&total).Error
 	if err != nil {

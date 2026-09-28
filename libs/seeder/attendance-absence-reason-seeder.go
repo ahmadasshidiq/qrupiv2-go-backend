@@ -17,7 +17,6 @@ var defaultAttendanceAbsenceReasons = []struct {
 	{name: "Sakit", description: "Tidak hadir karena sakit"},
 }
 
-// SeedAttendanceAbsenceReasons creates the default reasons for every institution.
 func SeedAttendanceAbsenceReasons(db *gorm.DB) error {
 	var institutionIDs []uuid.UUID
 	if err := db.Model(&models.Institution{}).Pluck("id", &institutionIDs).Error; err != nil {
@@ -32,8 +31,6 @@ func SeedAttendanceAbsenceReasons(db *gorm.DB) error {
 	return nil
 }
 
-// SeedAttendanceAbsenceReasonsForInstitution is idempotent and restores an
-// archived default reason if one already exists.
 func SeedAttendanceAbsenceReasonsForInstitution(db *gorm.DB, institutionID uuid.UUID) error {
 	for _, item := range defaultAttendanceAbsenceReasons {
 		var reason models.AttendanceAbsenceReason

@@ -52,7 +52,6 @@ func SeedRoles(DB *gorm.DB) error {
 	return nil
 }
 
-// SeedDinasPendidikanRole creates the region-scoped institution manager role.
 func SeedDinasPendidikanRole(DB *gorm.DB) error {
 	permissions, err := json.Marshal([]models.PermissionItem{
 		{Model: "institutions", Action: "get-all"}, {Model: "institutions", Action: "get-by-id"},
@@ -75,18 +74,15 @@ func SeedDinasPendidikanRole(DB *gorm.DB) error {
 	return nil
 }
 
-// Seeder untuk user Super Admin (owner)
 func SeedSuperAdminUser(DB *gorm.DB) error {
 	adminEmail := os.Getenv("SEED_EMAIL")
 	adminPassword := os.Getenv("SEED_PASS")
 
-	// pastikan role Super Admin sudah ada
 	var superAdminRole models.Role
 	if err := DB.Where("name = ?", "Super Admin").First(&superAdminRole).Error; err != nil {
 		return errors.New("Super Admin role not found — jalankan SeedRoles terlebih dahulu")
 	}
 
-	// cek apakah user sudah ada
 	var existing models.User
 	if err := DB.Where("email = ?", adminEmail).First(&existing).Error; err == nil {
 		log.Println("[Seeder] ℹ️ Super Admin user already exists")
@@ -95,7 +91,6 @@ func SeedSuperAdminUser(DB *gorm.DB) error {
 		return err
 	}
 
-	// generate salt dan layer
 	rand.Seed(time.Now().UnixNano())
 	layerOne := rand.Perm(rand.Intn(6) + 3)
 	layerTwo := cryptography.GenerateRandomString(rand.Intn(25) + 12)
@@ -103,7 +98,6 @@ func SeedSuperAdminUser(DB *gorm.DB) error {
 
 	layerOneStr, _ := json.Marshal(layerOne)
 
-	// enkripsi password
 	encodedOne := cryptography.VigenereEncrypt(adminPassword, layerOne)
 	encodedTwo := cryptography.PolyalphabetEncrypt(encodedOne, layerTwo)
 

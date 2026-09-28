@@ -27,7 +27,6 @@ func (s *LearningGroupMemberService) getAll(ctx *gin.Context, dto DefaultFindDTO
 		}
 	}
 
-	// filters
 	params["lgm.deleted_at.isnull"] = ""
 	var role string
 	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {

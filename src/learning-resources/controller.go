@@ -90,8 +90,6 @@ func (c *LearningResourceController) Update(ctx *gin.Context) {
 		helpers.RespondError(ctx, "learning-resources", http.StatusBadRequest, err)
 		return
 	}
-	// Browsers commonly submit array fields using the [] suffix. Gin's
-	// binder does not consistently map that spelling to a slice field.
 	if len(dto.OldFileIDs) == 0 {
 		dto.OldFileIDs = ctx.PostFormArray("old_file_ids[]")
 		if len(dto.OldFileIDs) == 0 {

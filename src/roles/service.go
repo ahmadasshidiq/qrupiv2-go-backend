@@ -32,7 +32,6 @@ func (s *RoleService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 		}
 	}
 
-	// filters
 	params["roles.deleted_at.isnull"] = ""
 
 	result, err := helpers.BuildPaginatedQuery(
@@ -76,12 +75,10 @@ func (s *RoleService) getMasterPermissions() ([]models.GroupedPermission, error)
 
 	groupMap := make(map[string][]models.PermissionItem)
 
-	// Kelompokkan berdasarkan model
 	for _, p := range masterPermissions {
 		groupMap[p.Model] = append(groupMap[p.Model], p)
 	}
 
-	// Ubah ke dalam bentuk array GroupedPermission
 	var grouped []models.GroupedPermission
 	for model, perms := range groupMap {
 		grouped = append(grouped, models.GroupedPermission{

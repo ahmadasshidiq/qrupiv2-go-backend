@@ -47,8 +47,6 @@ func (s *Aggregator) GetForRole(ctx context.Context, headers http.Header, query 
 	if expectedRole != "" && role != expectedRole {
 		return nil, fmt.Errorf("dashboard endpoint requires role %q", expectedRole)
 	}
-	// Never trust a client-supplied user_id for personal dashboards.
-	// The gateway injects X-User-ID from the validated token.
 	effectiveQuery := cloneValues(query)
 	if isStudentRole(role) {
 		effectiveQuery.Set("user_id", headers.Get("X-User-ID"))
@@ -56,11 +54,7 @@ func (s *Aggregator) GetForRole(ctx context.Context, headers http.Header, query 
 	if institutionID := headers.Get("X-Institution-ID"); institutionID != "" {
 		effectiveQuery.Set("institution_id", institutionID)
 	}
-	// Dashboard aggregates need enough rows to calculate rankings. Upstream
-	// services cap this value at their own safe maximum.
 	if effectiveQuery.Get("limit") == "" {
-		// Super admin rankings and the map are calculated from the returned
-		// institution/group/user rows. Request the largest supported page.
 		if helpers.IsRole(role, "super_admin") {
 			effectiveQuery.Set("limit", "999")
 		} else {
@@ -85,8 +79,6 @@ func (s *Aggregator) GetForRole(ctx context.Context, headers http.Header, query 
 		effectiveQuery.Set("scope", "school")
 	}
 	h := sha256.Sum256([]byte(role + "|" + headers.Get("X-User-ID") + "|" + headers.Get("X-Institution-ID") + "|" + effectiveQuery.Encode()))
-	// Bump when the aggregation shape/query changes so stale Redis payloads
-	// cannot hide newly added institution activity rankings.
 	key := "dashboard:v13:" + hex.EncodeToString(h[:])
 	if s.Cache != nil {
 		if b, err := s.Cache.Get(ctx, key).Bytes(); err == nil {
@@ -130,9 +122,6 @@ func (s *Aggregator) GetForRole(ctx context.Context, headers http.Header, query 
 	return r, nil
 }
 
-// dashboardData exposes only aggregated payloads. Raw rows are still fetched
-// internally when needed to calculate summary totals, but are not returned to
-// clients.
 func dashboardData(role string, data map[string]any) map[string]any {
 	result := make(map[string]any)
 	for _, key := range []string{"positive_activity_chart", "violation_activity_chart"} {
@@ -156,9 +145,6 @@ func dashboardData(role string, data map[string]any) map[string]any {
 	return result
 }
 
-// instructorGroupSummary returns a small, dashboard-safe view of the groups
-// assigned to the instructor. Upstream payloads differ slightly between
-// services, so only commonly available fields are copied.
 func instructorGroupSummary(groups, members, attendance, quizzes any) []any {
 	memberCount := map[string]int{}
 	for _, row := range records(members) {
@@ -194,8 +180,6 @@ func instructorGroupSummary(groups, members, attendance, quizzes any) []any {
 	return result
 }
 
-// studentsNeedAttention is intentionally conservative: it reports explicit
-// absence/low-score records when those fields are supplied by upstream APIs.
 func studentsNeedAttention(attendance, quizzes any) []any {
 	result := []any{}
 	seen := map[string]bool{}
@@ -249,8 +233,6 @@ func numberValue(object map[string]any, key ...string) *float64 {
 	return nil
 }
 
-// institutionLocations keeps the map payload small and adds the student
-// count expected by the super-admin dashboard.
 func institutionLocations(value, users any) []any {
 	studentCounts := map[string]int{}
 	for _, row := range records(users) {
@@ -314,8 +296,6 @@ func dashboardTeachers(value any) []any {
 	return records(object["top_teachers"])
 }
 
-// dashboardPaths is intentionally role-specific so adding a card for one role
-// does not silently change every other dashboard's query cost or response.
 func dashboardPaths(role string) map[string]string {
 	switch {
 	case helpers.IsRole(role, "student"):
@@ -360,9 +340,6 @@ func (s *Aggregator) resolveRole(ctx context.Context, headers http.Header, roleI
 }
 
 func (s *Aggregator) instructorGroups(ctx context.Context, headers http.Header, query url.Values) ([]string, error) {
-	// learning-groups applies the authenticated-member scope in the learning
-	// service. Querying memberships here caused the user filter to be rewritten
-	// as u.id, while the membership service scopes instructors from context.
 	groupQuery := cloneValues(query)
 	groupQuery.Del("learning_group_id")
 	groupQuery.Del("learning_group_id.in")
@@ -603,9 +580,6 @@ func (s *Aggregator) fetch(ctx context.Context, headers http.Header, path string
 	if path != "/activities/chart" && path != "/quiz-sessions/rankings" {
 		applyListFilters(path, query)
 	}
-	// Scope is enforced by JWT-aware upstream services. Do not forward a
-	// generic user_id filter to endpoints whose database schema uses another
-	// column or derives the user from the authenticated context.
 	switch path {
 	case "/users":
 		if userID := query.Get("user_id"); userID != "" {
@@ -678,8 +652,6 @@ func (s *Aggregator) fetch(ctx context.Context, headers http.Header, path string
 	if err := json.Unmarshal(b, &v); err != nil {
 		return nil, err
 	}
-	// All repository controllers wrap payloads as {data, message, status}.
-	// Dashboard exposes the actual payload directly to avoid data.data.
 	if envelope, ok := v.(map[string]any); ok {
 		if payload, exists := envelope["data"]; exists {
 			return payload, nil

@@ -30,7 +30,6 @@ func (s *QuizSessionService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*help
 		}
 	}
 
-	// filters
 	params["qs.deleted_at.isnull"] = ""
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
 		params["i.id"] = institutionID

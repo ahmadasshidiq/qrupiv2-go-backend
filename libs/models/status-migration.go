@@ -2,8 +2,6 @@ package models
 
 import "gorm.io/gorm"
 
-// MigrateLegacyStatusColumns preserves existing status values while services
-// transition from the legacy is_active columns to status columns.
 func MigrateLegacyStatusColumns(db *gorm.DB) error {
 	return db.Transaction(func(tx *gorm.DB) error {
 		if tx.Migrator().HasTable("users") &&

@@ -26,7 +26,6 @@ import (
 var MinioClient *minio.Client
 var MinioPublicURL string
 
-// InitMinio initializes the shared client and verifies that MinIO is reachable.
 func InitMinio() error {
 	_ = godotenv.Load()
 
@@ -64,7 +63,6 @@ func InitMinio() error {
 	return nil
 }
 
-// UploadToMinio: upload ke bucket tertentu
 func UploadToMinio(file multipart.File, bucketName string, folderName string, filename string, contentType string, size int64) (string, error) {
 	if MinioClient == nil {
 		return "", fmt.Errorf("MinIO client belum diinisialisasi")
@@ -75,7 +73,6 @@ func UploadToMinio(file multipart.File, bucketName string, folderName string, fi
 
 	ctx := context.Background()
 
-	// Pastikan bucket ada
 	exists, err := MinioClient.BucketExists(ctx, bucketName)
 	if err != nil {
 		return "", fmt.Errorf("cek bucket gagal: %w", err)
@@ -88,10 +85,8 @@ func UploadToMinio(file multipart.File, bucketName string, folderName string, fi
 		log.Println("✅ Berhasil membuat bucket:", bucketName)
 	}
 
-	// --- [1] Sanitasi nama institusi untuk folder ---
 	subFolder := "unknown"
 	if folderName != "" {
-		// Hapus spasi, simbol aneh, dan huruf besar → lowercase + dash
 		subFolder = strings.ToLower(strings.ReplaceAll(folderName, " ", "-"))
 		subFolder = strings.Map(func(r rune) rune {
 			if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
@@ -101,10 +96,8 @@ func UploadToMinio(file multipart.File, bucketName string, folderName string, fi
 		}, subFolder)
 	}
 
-	// --- [2] Siapkan nama file ---
 	objectName := fmt.Sprintf("%s/%s-%s", subFolder, uuid.NewString(), filename)
 
-	// --- [3] Cek apakah file gambar ---
 	ext := strings.ToLower(filepath.Ext(filename))
 	isImage := ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp"
 
@@ -146,7 +139,6 @@ func UploadToMinio(file multipart.File, bucketName string, folderName string, fi
 		uploadContentType = contentType
 	}
 
-	// --- [4] Upload ke MinIO ---
 	_, err = MinioClient.PutObject(
 		ctx,
 		bucketName,
@@ -159,7 +151,6 @@ func UploadToMinio(file multipart.File, bucketName string, folderName string, fi
 		return "", fmt.Errorf("upload ke MinIO gagal: %w", err)
 	}
 
-	// --- [5] Return URL publik ---
 	return fmt.Sprintf("%s/%s/%s", MinioPublicURL, bucketName, objectName), nil
 }
 

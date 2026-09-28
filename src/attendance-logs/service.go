@@ -45,8 +45,6 @@ func (s *AttendanceLogService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*he
 	return helpers.BuildPaginatedQuery(ctx, s.DB, params, "attendance_logs", base, "", "", dto.SortBy)
 }
 
-// Teachers can see logs they recorded themselves, or logs belonging to a
-// learning group where they are an active member.
 func (s *AttendanceLogService) teacherScope(ctx *gin.Context) (string, error) {
 	userID := ctx.GetString("user_id")
 	if userID == "" {
