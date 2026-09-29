@@ -14,7 +14,25 @@ import (
 	"gorm.io/gorm"
 )
 
-func RegisterAllModules(_ *gin.RouterGroup) {}
+func RegisterAllModules(router *gin.RouterGroup, db *gorm.DB, sender *notif.FCMSender, logger *slog.Logger) {
+	RegisterNotificationAPI(router, db)
+	router.POST("/internal/events", func(c *gin.Context) {
+		var event notif.Event
+		if err := c.ShouldBindJSON(&event); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		recipients := event.RecipientIDs
+		if len(recipients) == 0 && event.UserID != "" {
+			recipients = []string{event.UserID}
+		}
+		if err := persistNotifications(c, db, sender, logger, string(event.Type), event.InstitutionID, recipients, event.Title, event.Message, event.EntityID, event.Deeplink, event.WebURL, event.MobileRoute, event.Data); err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		c.Status(202)
+	})
+}
 
 type notificationEventData struct {
 	RecipientIDs []string       `json:"recipient_ids"`
@@ -33,19 +51,8 @@ func HandleEvent(db *gorm.DB, sender *notif.FCMSender, logger *slog.Logger) kafk
 		if err := json.Unmarshal(event.Data, &payload); err != nil {
 			return err
 		}
-		entityID, _ := uuid.Parse(payload.EntityID)
-		institutionID, _ := uuid.Parse(event.InstitutionID)
-		var rawData datatypes.JSON
-		if payload.Data != nil {
-			encoded, err := json.Marshal(payload.Data)
-			if err != nil {
-				return err
-			}
-			rawData = datatypes.JSON(encoded)
-		} else {
-			rawData = datatypes.JSON(`{}`)
-		}
-		for _, recipient := range payload.RecipientIDs {
+		return persistNotifications(ctx, db, sender, logger, event.EventType, event.InstitutionID, payload.RecipientIDs, payload.Title, payload.Message, payload.EntityID, payload.Deeplink, payload.WebURL, payload.MobileRoute, payload.Data)
+		/*for _, recipient := range payload.RecipientIDs {
 			userID, err := uuid.Parse(recipient)
 			if err != nil {
 				continue
@@ -69,8 +76,41 @@ func HandleEvent(db *gorm.DB, sender *notif.FCMSender, logger *slog.Logger) kafk
 					logger.WarnContext(ctx, "firebase notification failed", "error", err, "user_id", userID)
 				}
 			}
-		}
+		}*/
 		logger.InfoContext(ctx, "notification event processed", "event_type", event.EventType, "event_id", event.EventID, "recipients", len(payload.RecipientIDs))
 		return nil
 	}
+}
+
+func persistNotifications(ctx context.Context, db *gorm.DB, sender *notif.FCMSender, logger *slog.Logger, eventType, institution string, recipients []string, title, message, entityID, deeplink, webURL, mobileRoute string, data map[string]any) error {
+	institutionID, _ := uuid.Parse(institution)
+	eid, _ := uuid.Parse(entityID)
+	raw, _ := json.Marshal(data)
+	for _, recipient := range recipients {
+		userID, err := uuid.Parse(recipient)
+		if err != nil {
+			continue
+		}
+		var existing int64
+		db.WithContext(ctx).Model(&models.Notification{}).Where("user_id = ? AND event_type = ? AND entity_id = ? AND deleted_at IS NULL", userID, eventType, eid).Count(&existing)
+		if existing > 0 {
+			continue
+		}
+		n := models.Notification{UserID: userID, EventType: eventType, Title: title, Message: message, Deeplink: deeplink, WebURL: webURL, MobileRoute: mobileRoute, Data: datatypes.JSON(raw)}
+		if institutionID != uuid.Nil {
+			n.InstitutionID = &institutionID
+		}
+		if eid != uuid.Nil {
+			n.EntityID = &eid
+		}
+		if err := db.WithContext(ctx).Create(&n).Error; err != nil {
+			return err
+		}
+		var devices []models.NotificationDevice
+		db.WithContext(ctx).Where("user_id = ? AND is_active = ?", userID, true).Find(&devices)
+		for _, d := range devices {
+			_, _ = sender.Send(ctx, d.Token, title, message, deeplink, webURL, mobileRoute, entityID)
+		}
+	}
+	return nil
 }

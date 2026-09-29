@@ -3,6 +3,8 @@ package activities
 import (
 	"clasenna-go-backend/libs/helpers"
 	"clasenna-go-backend/libs/models"
+	notif "clasenna-go-backend/libs/notifications"
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -14,9 +16,18 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type ActivityService struct{ DB *gorm.DB }
+type ActivityService struct {
+	DB       *gorm.DB
+	Notifier notif.Publisher
+}
 
-func NewService(db *gorm.DB) *ActivityService { return &ActivityService{DB: db} }
+func NewService(db *gorm.DB, publishers ...notif.Publisher) *ActivityService {
+	s := &ActivityService{DB: db}
+	if len(publishers) > 0 {
+		s.Notifier = publishers[0]
+	}
+	return s
+}
 
 func (s *ActivityService) getLimitStatuses(ctx *gin.Context, date string) ([]ActivityLimitStatus, error) {
 	day, err := time.ParseInLocation("2006-01-02", date, time.Local)
@@ -290,7 +301,25 @@ func (s *ActivityService) create(dto CreateDTO) (*models.Activity, error) {
 	}); err != nil {
 		return nil, err
 	}
+	if s.Notifier != nil {
+		go func() {
+			_ = s.Notifier.Publish(context.Background(), notif.Event{
+				Type: notif.EventTypeActivityCreated, Scope: notif.EventScopeUser,
+				Title: "Aktivitas baru", Message: "Aktivitas baru telah dicatat untukmu.",
+				InstitutionID: uuidString(data.InstitutionID), UserID: data.UserID.String(),
+				RecipientIDs: []string{data.UserID.String()}, EntityID: data.ID.String(),
+				Data: map[string]interface{}{"point_value": data.PointValue}, CreatedAt: time.Now(),
+			})
+		}()
+	}
 	return &data, nil
+}
+
+func uuidString(id *uuid.UUID) string {
+	if id == nil {
+		return ""
+	}
+	return id.String()
 }
 
 func (s *ActivityService) update(id string, dto UpdateDTO) (*models.Activity, error) {

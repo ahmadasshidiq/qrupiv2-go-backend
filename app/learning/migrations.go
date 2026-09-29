@@ -5,6 +5,20 @@ import (
 	"gorm.io/gorm"
 )
 
+func migrateAttendanceOccurredAt(db *gorm.DB) error {
+	migrator := db.Migrator()
+	if !migrator.HasTable(&models.AttendanceLog{}) || migrator.HasColumn(&models.AttendanceLog{}, "occurred_at") {
+		return nil
+	}
+	if err := db.Exec(`ALTER TABLE attendance_logs ADD COLUMN occurred_at timestamptz`).Error; err != nil {
+		return err
+	}
+	if err := db.Exec(`UPDATE attendance_logs SET occurred_at = COALESCE(check_in_at, created_at) WHERE occurred_at IS NULL`).Error; err != nil {
+		return err
+	}
+	return db.Exec(`ALTER TABLE attendance_logs ALTER COLUMN occurred_at SET NOT NULL`).Error
+}
+
 func migrateLegacyLearningResourceFiles(db *gorm.DB) error {
 	if !db.Migrator().HasTable(&models.LearningResource{}) ||
 		!db.Migrator().HasTable(&models.LearningResourceFile{}) ||

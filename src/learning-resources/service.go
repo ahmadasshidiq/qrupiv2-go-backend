@@ -1,14 +1,17 @@
 package learning_resources
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"clasenna-go-backend/libs/helpers"
 	"clasenna-go-backend/libs/models"
+	notif "clasenna-go-backend/libs/notifications"
 	"clasenna-go-backend/libs/stores"
 
 	"github.com/gin-gonic/gin"
@@ -18,9 +21,18 @@ import (
 
 const maxLearningResourceFileSize int64 = 8 * 1024 * 1024
 
-type LearningResourceService struct{ DB *gorm.DB }
+type LearningResourceService struct {
+	DB       *gorm.DB
+	Notifier notif.Publisher
+}
 
-func NewService(db *gorm.DB) *LearningResourceService { return &LearningResourceService{DB: db} }
+func NewService(db *gorm.DB, publishers ...notif.Publisher) *LearningResourceService {
+	s := &LearningResourceService{DB: db}
+	if len(publishers) > 0 {
+		s.Notifier = publishers[0]
+	}
+	return s
+}
 
 func uploadLearningResourceFiles(ctx *gin.Context, institutionID string) ([]string, error) {
 	if err := ctx.Request.ParseMultipartForm(32 << 20); err != nil {
@@ -179,6 +191,19 @@ func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*mode
 
 	data.LearningGroups = groups
 	data.LearningGroupIDs = learningGroupIDs(groups)
+	if s.Notifier != nil {
+		var recipients []uuid.UUID
+		if len(data.LearningGroupIDs) > 0 {
+			s.DB.Table("learning_group_members").Where("learning_group_id IN ? AND role_in_group = ? AND deleted_at IS NULL", data.LearningGroupIDs, models.RoleInGroupStudent).Pluck("user_id", &recipients)
+		}
+		ids := make([]string, 0, len(recipients))
+		for _, id := range recipients {
+			ids = append(ids, id.String())
+		}
+		go func() {
+			_ = s.Notifier.Publish(context.Background(), notif.Event{Type: notif.EventTypeResourceCreated, Scope: notif.EventScopeUser, Title: "Modul baru tersedia", Message: "Ada modul pembelajaran baru di learning group kamu.", UserID: uploadedUserID.String(), RecipientIDs: ids, EntityID: data.ID.String(), InstitutionID: institutionID, Data: map[string]interface{}{"title": data.Title}, CreatedAt: time.Now()})
+		}()
+	}
 	return &data, nil
 }
 

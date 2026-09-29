@@ -19,6 +19,7 @@ type CreateDTO struct {
 	Type             string     `json:"type" binding:"required,oneof=student teacher learning_group"`
 	Status           string     `json:"status" binding:"required,oneof=on_time late absent"`
 	RequiresCheckOut bool       `json:"requires_check_out"`
+	OccurredAt       time.Time  `json:"occurred_at" binding:"required"`
 	CheckInAt        *time.Time `json:"check_in_at"`
 	CheckInLat       *float64   `json:"check_in_lat" binding:"omitempty,latitude"`
 	CheckInLong      *float64   `json:"check_in_long" binding:"omitempty,longitude"`
@@ -44,6 +45,7 @@ type UpdateDTO struct {
 	Type             *string    `json:"type" binding:"omitempty,oneof=student teacher learning_group"`
 	Status           *string    `json:"status" binding:"omitempty,oneof=on_time late absent"`
 	RequiresCheckOut *bool      `json:"requires_check_out"`
+	OccurredAt       *time.Time `json:"occurred_at" binding:"omitempty"`
 	CheckInAt        *time.Time `json:"check_in_at"`
 	CheckInLat       *float64   `json:"check_in_lat" binding:"omitempty,latitude"`
 	CheckInLong      *float64   `json:"check_in_long" binding:"omitempty,longitude"`
@@ -58,6 +60,7 @@ type CheckInDTO struct {
 	Type             string     `json:"type" binding:"required,oneof=student teacher learning_group"`
 	Status           string     `json:"status" binding:"required,oneof=on_time late"`
 	RequiresCheckOut bool       `json:"requires_check_out"`
+	OccurredAt       time.Time  `json:"occurred_at" binding:"required"`
 	CheckInAt        *time.Time `json:"check_in_at"`
 	LocationLat      *float64   `json:"location_lat" binding:"omitempty,latitude"`
 	LocationLong     *float64   `json:"location_long" binding:"omitempty,longitude"`

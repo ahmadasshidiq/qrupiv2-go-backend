@@ -2,12 +2,13 @@ package activities
 
 import (
 	"clasenna-go-backend/libs/cryptography"
+	notif "clasenna-go-backend/libs/notifications"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 func RegisterActivityModule(router *gin.RouterGroup, db *gorm.DB) {
-	c := NewController(NewService(db))
+	c := NewController(NewService(db, notif.NewPublisherFromEnv()))
 	p := cryptography.AccessMiddleware{DB: db}
 	g := router.Group("/activities")
 	g.Use(cryptography.JWTMiddleware(db))

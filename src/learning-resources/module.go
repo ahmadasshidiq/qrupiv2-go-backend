@@ -2,13 +2,14 @@ package learning_resources
 
 import (
 	"clasenna-go-backend/libs/cryptography"
+	notif "clasenna-go-backend/libs/notifications"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 func RegisterLearningResourceModule(router *gin.RouterGroup, db *gorm.DB) {
-	service := NewService(db)
+	service := NewService(db, notif.NewPublisherFromEnv())
 	controller := NewController(service)
 	permissions := cryptography.AccessMiddleware{DB: db}
 

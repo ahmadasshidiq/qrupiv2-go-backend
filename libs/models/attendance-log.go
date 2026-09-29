@@ -32,6 +32,7 @@ type AttendanceLog struct {
 	Type             AttendanceType   `gorm:"type:varchar(30);not null;default:'student';index;index:idx_attendance_context_checkin,priority:2" json:"type"`
 	Status           AttendanceStatus `gorm:"type:varchar(20);not null;default:'absent'" json:"status"`
 	RequiresCheckOut bool             `gorm:"type:boolean;not null;default:false" json:"requires_check_out"`
+	OccurredAt       time.Time        `gorm:"not null;index" json:"occurred_at"`
 	CheckInAt        *time.Time       `gorm:"index;index:idx_attendance_context_checkin,priority:4" json:"check_in_at,omitempty"`
 	CheckInLat       *float64         `gorm:"type:decimal(10,8)" json:"check_in_lat,omitempty"`
 	CheckInLong      *float64         `gorm:"type:decimal(11,8)" json:"check_in_long,omitempty"`

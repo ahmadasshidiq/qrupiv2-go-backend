@@ -42,6 +42,7 @@ type Event struct {
 	GroupName     string                 `json:"group_name,omitempty"`
 	GroupCode     string                 `json:"group_code,omitempty"`
 	UserID        string                 `json:"user_id,omitempty"`
+	RecipientIDs  []string               `json:"recipient_ids,omitempty"`
 	ActorID       string                 `json:"actor_id,omitempty"`
 	Data          map[string]interface{} `json:"data,omitempty"`
 	EntityID      string                 `json:"entity_id,omitempty"`
@@ -90,7 +91,7 @@ func (p HTTPPublisher) Publish(ctx context.Context, event Event) error {
 		return fmt.Errorf("marshal notification event: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.BaseURL+"/internal/events", bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.BaseURL+"/api/v1/internal/events", bytes.NewReader(payload))
 	if err != nil {
 		return fmt.Errorf("build notification request: %w", err)
 	}

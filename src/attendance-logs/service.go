@@ -114,6 +114,7 @@ func (s *AttendanceLogService) create(ctx *gin.Context, dto CreateDTO) (*models.
 	data := models.AttendanceLog{
 		UserID: userID, RecordedUserID: &recordedUserID, LearningGroupID: learningGroupID, Type: attendanceType,
 		Status: models.AttendanceStatus(dto.Status), RequiresCheckOut: dto.RequiresCheckOut,
+		OccurredAt:      dto.OccurredAt,
 		AbsenceReasonID: absenceReasonID, AbsenceNote: dto.AbsenceNote,
 		CheckInAt: dto.CheckInAt, CheckInLat: dto.CheckInLat, CheckInLong: dto.CheckInLong,
 		CheckOutAt: dto.CheckOutAt, CheckOutLat: dto.CheckOutLat, CheckOutLong: dto.CheckOutLong,
@@ -123,10 +124,10 @@ func (s *AttendanceLogService) create(ctx *gin.Context, dto CreateDTO) (*models.
 	}
 	if err := s.DB.WithContext(ctx.Request.Context()).Transaction(func(tx *gorm.DB) error {
 		if data.CheckInAt != nil {
-			if err := lockAttendanceDay(tx, data.UserID, data.Type, data.LearningGroupID, *data.CheckInAt); err != nil {
+			if err := lockAttendanceDay(tx, data.UserID, data.Type, data.LearningGroupID, data.OccurredAt); err != nil {
 				return err
 			}
-			if err := ensureNoDailyCheckIn(tx, data.UserID, data.Type, data.LearningGroupID, *data.CheckInAt, uuid.Nil); err != nil {
+			if err := ensureNoDailyCheckIn(tx, data.UserID, data.Type, data.LearningGroupID, data.OccurredAt, uuid.Nil); err != nil {
 				return err
 			}
 		}
@@ -145,7 +146,8 @@ func (s *AttendanceLogService) checkIn(ctx *gin.Context, dto CheckInDTO) (*model
 	return s.create(ctx, CreateDTO{
 		UserID: dto.UserID, LearningGroupID: dto.LearningGroupID, Type: dto.Type,
 		Status: dto.Status, RequiresCheckOut: dto.RequiresCheckOut,
-		CheckInAt: &checkInAt, CheckInLat: dto.LocationLat, CheckInLong: dto.LocationLong,
+		OccurredAt: dto.OccurredAt,
+		CheckInAt:  &checkInAt, CheckInLat: dto.LocationLat, CheckInLong: dto.LocationLong,
 	})
 }
 
@@ -227,6 +229,9 @@ func (s *AttendanceLogService) update(ctx *gin.Context, id string, dto UpdateDTO
 	if dto.RequiresCheckOut != nil {
 		data.RequiresCheckOut = *dto.RequiresCheckOut
 	}
+	if dto.OccurredAt != nil {
+		data.OccurredAt = *dto.OccurredAt
+	}
 	if dto.CheckInAt != nil {
 		data.CheckInAt = dto.CheckInAt
 	}
@@ -255,11 +260,11 @@ func (s *AttendanceLogService) update(ctx *gin.Context, id string, dto UpdateDTO
 		return nil, err
 	}
 	err = s.DB.WithContext(ctx.Request.Context()).Transaction(func(tx *gorm.DB) error {
-		if data.CheckInAt != nil {
-			if err := lockAttendanceDay(tx, data.UserID, data.Type, data.LearningGroupID, *data.CheckInAt); err != nil {
+		if data.OccurredAt != (time.Time{}) {
+			if err := lockAttendanceDay(tx, data.UserID, data.Type, data.LearningGroupID, data.OccurredAt); err != nil {
 				return err
 			}
-			if err := ensureNoDailyCheckIn(tx, data.UserID, data.Type, data.LearningGroupID, *data.CheckInAt, data.ID); err != nil {
+			if err := ensureNoDailyCheckIn(tx, data.UserID, data.Type, data.LearningGroupID, data.OccurredAt, data.ID); err != nil {
 				return err
 			}
 		}

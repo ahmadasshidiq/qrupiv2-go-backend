@@ -33,6 +33,10 @@ func main() {
 			return
 		}
 	}
+	if err := migrateAttendanceOccurredAt(db); err != nil {
+		logger.Error("attendance occurred_at migration failed", "error", err)
+		return
+	}
 	if err := db.AutoMigrate(
 		&models.LearningGroup{},
 		&models.LearningGroupMember{},

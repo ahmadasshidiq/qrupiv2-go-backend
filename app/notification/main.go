@@ -61,7 +61,7 @@ func main() {
 	metrics := &httpserver.Metrics{}
 	r.Use(httpserver.Middleware(logger, metrics))
 	httpserver.RegisterProbes(r, metrics, nil)
-	RegisterAllModules(r.Group("/api/v1"))
+	RegisterAllModules(r.Group("/api/v1"), db, fcm, logger)
 	if err := httpserver.Run(ctx, ":"+helpers.ConfigString("NOTIFICATION_PORT", "3004"), r, logger); err != nil {
 		logger.Error("server stopped", "error", err)
 	}
