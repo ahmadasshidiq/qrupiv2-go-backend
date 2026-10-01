@@ -91,6 +91,7 @@ func (s *Aggregator) GetForRole(ctx context.Context, headers http.Header, query 
 	}
 	paths := dashboardPaths(role)
 	data := map[string]any{}
+	hasUpstreamErrors := false
 	for name, path := range paths {
 		requestQuery := cloneValues(effectiveQuery)
 		if path == "/activities/chart" {
@@ -110,13 +111,14 @@ func (s *Aggregator) GetForRole(ctx context.Context, headers http.Header, query 
 		}
 		v, err := s.fetch(ctx, headers, path, requestQuery)
 		if err != nil {
+			hasUpstreamErrors = true
 			data[name] = map[string]any{"available": false, "error": err.Error()}
 		} else {
 			data[name] = v
 		}
 	}
 	r := &Response{Generated: time.Now().UTC().Format(time.RFC3339), Summary: summarize(role, data), Rankings: buildRankings(role, data), Data: dashboardData(role, data)}
-	if b, err := json.Marshal(r); err == nil && s.Cache != nil {
+	if b, err := json.Marshal(r); err == nil && s.Cache != nil && !hasUpstreamErrors {
 		_ = s.Cache.Set(ctx, key, b, s.TTL).Err()
 	}
 	return r, nil

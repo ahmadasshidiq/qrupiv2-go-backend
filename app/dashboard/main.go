@@ -20,7 +20,7 @@ import (
 
 func dashboardAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token, _ := c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"))
+		token, _ := c.Cookie(helpers.AuthCookieName(c.Request))
 		if token == "" {
 			if header := c.GetHeader("Authorization"); header != "" {
 				token = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(header, "Bearer "), "bearer "))

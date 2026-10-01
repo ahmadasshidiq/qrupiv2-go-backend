@@ -34,11 +34,11 @@ func CSRFProtection() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if _, err := c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth")); err != nil {
+		if _, err := c.Cookie(helpers.AuthCookieName(c.Request)); err != nil {
 			c.Next()
 			return
 		}
-		cookie, err := c.Cookie(CSRFTokenCookie)
+		cookie, err := c.Cookie(helpers.CSRFCookieName(c.Request))
 		if err != nil || cookie == "" || cookie != c.GetHeader("X-CSRF-Token") {
 			SafeError(c, http.StatusForbidden, "FORBIDDEN", "Permintaan tidak dapat diverifikasi.")
 			return

@@ -68,7 +68,7 @@ func ValidateToken(tokenString string) (*jwt.Token, jwt.MapClaims, error) {
 
 func JWTMiddleware(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tokenString, _ := c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"))
+		tokenString, _ := c.Cookie(helpers.AuthCookieName(c.Request))
 		if tokenString == "" {
 			authHeader := c.GetHeader("Authorization")
 			if authHeader != "" {

@@ -20,8 +20,8 @@ func setAuthCookie(ctx *gin.Context, data map[string]interface{}) {
 	}
 	secure := helpers.ConfigString("AUTH_COOKIE_SECURE", "true") == "true"
 	ctx.SetSameSite(http.SameSiteLaxMode)
-	ctx.SetCookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"), token, maxAge, "/", helpers.ConfigString("AUTH_COOKIE_DOMAIN", ""), secure, true)
-	ctx.SetCookie(httpserver.CSRFTokenCookie, httpserver.NewCSRFToken(), maxAge, "/", helpers.ConfigString("AUTH_COOKIE_DOMAIN", ""), secure, false)
+	ctx.SetCookie(helpers.AuthCookieName(ctx.Request), token, maxAge, "/", helpers.ConfigString("AUTH_COOKIE_DOMAIN", ""), secure, true)
+	ctx.SetCookie(helpers.CSRFCookieName(ctx.Request), httpserver.NewCSRFToken(), maxAge, "/", helpers.ConfigString("AUTH_COOKIE_DOMAIN", ""), secure, false)
 }
 
 type AuthController struct {
@@ -128,8 +128,8 @@ func (c *AuthController) Logout(ctx *gin.Context) {
 	}
 	secure := helpers.ConfigString("AUTH_COOKIE_SECURE", "true") == "true"
 	domain := helpers.ConfigString("AUTH_COOKIE_DOMAIN", "")
-	ctx.SetCookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"), "", -1, "/", domain, secure, true)
-	ctx.SetCookie(httpserver.CSRFTokenCookie, "", -1, "/", domain, secure, false)
+	ctx.SetCookie(helpers.AuthCookieName(ctx.Request), "", -1, "/", domain, secure, true)
+	ctx.SetCookie(helpers.CSRFCookieName(ctx.Request), "", -1, "/", domain, secure, false)
 	ctx.JSON(http.StatusOK, helpers.FormatResponse(ctx.Request.Method, "logout", http.StatusOK, gin.H{"message": "logged out"}, nil, nil))
 }
 

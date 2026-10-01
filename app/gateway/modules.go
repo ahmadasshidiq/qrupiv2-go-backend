@@ -102,7 +102,7 @@ func isPublicRoute(method, path string) bool {
 }
 
 func authorize(c *gin.Context) bool {
-	tokenString, _ := c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"))
+	tokenString, _ := c.Cookie(helpers.AuthCookieName(c.Request))
 	ok := tokenString != ""
 	if !ok {
 		tokenString, ok = extractToken(c.GetHeader("Authorization"))
