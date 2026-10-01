@@ -4,9 +4,10 @@ import (
 	"clasenna-go-backend/libs/helpers"
 	"crypto/rand"
 	"encoding/base64"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 const CSRFTokenCookie = "qrupi_csrf"
@@ -29,6 +30,10 @@ func CSRFProtection() gin.HandlerFunc {
 			c.Next()
 			return
 		}
+		if isCSRFSafeAuthRoute(c.Request.URL.Path) {
+			c.Next()
+			return
+		}
 		if _, err := c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth")); err != nil {
 			c.Next()
 			return
@@ -40,6 +45,10 @@ func CSRFProtection() gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+func isCSRFSafeAuthRoute(path string) bool {
+	return strings.HasSuffix(path, "/auth/login") || strings.HasSuffix(path, "/auth/register")
 }
 
 // SecurityHeaders adds browser-enforced protections. Iframe sources are explicit
