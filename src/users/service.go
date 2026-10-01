@@ -59,6 +59,9 @@ func (s *UserService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 	if institutionID, scoped := authenticatedInstitutionID(ctx); scoped {
 		params["u.institution_id"] = institutionID
 	}
+	if err := helpers.ApplyRegionScope(ctx, params, "i"); err != nil {
+		return nil, err
+	}
 
 	baseQuery := `
 		select 

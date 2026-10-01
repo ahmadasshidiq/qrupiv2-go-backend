@@ -2,10 +2,27 @@ package auth
 
 import (
 	"clasenna-go-backend/libs/helpers"
+	"clasenna-go-backend/libs/httpserver"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
+
+func setAuthCookie(ctx *gin.Context, data map[string]interface{}) {
+	token, ok := data["token"].(string)
+	if !ok || token == "" {
+		return
+	}
+	delete(data, "token")
+	maxAge := helpers.ConfigInt("AUTH_COOKIE_MAX_AGE", 86400)
+	if helpers.ConfigString("AUTH_COOKIE_PERSIST", "false") == "true" {
+		maxAge = 0
+	}
+	secure := helpers.ConfigString("AUTH_COOKIE_SECURE", "true") == "true"
+	ctx.SetSameSite(http.SameSiteLaxMode)
+	ctx.SetCookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"), token, maxAge, "/", helpers.ConfigString("AUTH_COOKIE_DOMAIN", ""), secure, true)
+	ctx.SetCookie(httpserver.CSRFTokenCookie, httpserver.NewCSRFToken(), maxAge, "/", helpers.ConfigString("AUTH_COOKIE_DOMAIN", ""), secure, false)
+}
 
 type AuthController struct {
 	service *AuthService
@@ -33,7 +50,6 @@ func (c *AuthController) Register(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, res)
 		return
 	}
-
 	res := helpers.FormatResponse(ctx.Request.Method, "register", http.StatusCreated, data, nil, nil)
 	ctx.JSON(http.StatusCreated, res)
 }
@@ -56,6 +72,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, res)
 		return
 	}
+	setAuthCookie(ctx, data)
 
 	res := helpers.FormatResponse(ctx.Request.Method, "login", http.StatusOK, data, nil, nil)
 	ctx.JSON(http.StatusOK, res)
@@ -99,7 +116,21 @@ func (c *AuthController) StudentVerifyPin(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, helpers.FormatResponse(ctx.Request.Method, "student-verify-pin", http.StatusUnauthorized, nil, nil, err))
 		return
 	}
+	setAuthCookie(ctx, data)
 	ctx.JSON(http.StatusOK, helpers.FormatResponse(ctx.Request.Method, "student-verify-pin", http.StatusOK, data, nil, nil))
+}
+
+// Logout revokes the active token and clears authentication cookies.
+func (c *AuthController) Logout(ctx *gin.Context) {
+	if err := c.service.Logout(ctx.Request.Context(), ctx.GetString("user_id")); err != nil {
+		helpers.RespondError(ctx, "logout", http.StatusInternalServerError, err)
+		return
+	}
+	secure := helpers.ConfigString("AUTH_COOKIE_SECURE", "true") == "true"
+	domain := helpers.ConfigString("AUTH_COOKIE_DOMAIN", "")
+	ctx.SetCookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"), "", -1, "/", domain, secure, true)
+	ctx.SetCookie(httpserver.CSRFTokenCookie, "", -1, "/", domain, secure, false)
+	ctx.JSON(http.StatusOK, helpers.FormatResponse(ctx.Request.Method, "logout", http.StatusOK, gin.H{"message": "logged out"}, nil, nil))
 }
 
 // @Summary      Reset password user

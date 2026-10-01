@@ -15,7 +15,9 @@ func newRouter(logger *slog.Logger) *gin.Engine {
 
 	router.Use(gin.Recovery())
 	router.Use(httpserver.Middleware(logger, metrics))
+	router.Use(httpserver.SecurityHeaders())
 	router.Use(cors.New(newCORSConfig()))
+	router.Use(httpserver.CSRFProtection())
 	router.Use(newRateLimiter(helpers.ConfigInt("RATE_LIMIT_PER_MINUTE", 120)).Middleware())
 
 	httpserver.RegisterProbes(router, metrics, nil)

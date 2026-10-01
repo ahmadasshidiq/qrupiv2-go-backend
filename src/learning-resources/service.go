@@ -140,9 +140,9 @@ func (s *LearningResourceService) getAll(ctx *gin.Context, dto DefaultFindDTO) (
 	return helpers.BuildPaginatedQuery(ctx, s.DB, params, "learning_resources", baseQuery, "group by lr.id, u.name, i.id, i.name, viewer_lgm.user_id, viewer_lgm.role_in_group", "", dto.SortBy)
 }
 
-func (s *LearningResourceService) getByID(id string) (*models.LearningResource, error) {
+func (s *LearningResourceService) getByID(ctx *gin.Context, id string) (*models.LearningResource, error) {
 	var data models.LearningResource
-	err := s.DB.Preload("LearningGroups").Preload("UploadedUser").Preload("ResourceFiles").First(&data, "id = ?", id).Error
+	err := s.DB.Preload("LearningGroups").Preload("UploadedUser").Preload("ResourceFiles").Where("learning_resources.id = ? AND (learning_resources.uploaded_user_id = ? OR EXISTS (SELECT 1 FROM learning_resource_groups x JOIN learning_group_members m ON m.learning_group_id = x.learning_group_id WHERE x.learning_resource_id = learning_resources.id AND m.user_id = ? AND m.deleted_at IS NULL))", id, ctx.GetString("user_id"), ctx.GetString("user_id")).First(&data).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
@@ -209,7 +209,7 @@ func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*mode
 
 func (s *LearningResourceService) update(ctx *gin.Context, id string, dto UpdateDTO) (*models.LearningResource, error) {
 	var data models.LearningResource
-	if err := s.DB.Preload("ResourceFiles").First(&data, "id = ?", id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := s.DB.Preload("ResourceFiles").Where("id = ? AND uploaded_user_id = ?", id, ctx.GetString("user_id")).First(&data).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -517,5 +517,37 @@ func (s *LearningResourceService) delete(id string) (bool, error) {
 		fileURLs = append(fileURLs, file.URL)
 	}
 	deleteLearningResourceFiles(fileURLs)
+	return true, nil
+}
+
+func (s *LearningResourceService) removeForUser(ctx *gin.Context, id string, permanent bool) (bool, error) {
+	if permanent {
+		return s.deleteOwned(ctx, id)
+	}
+	result := s.DB.Where("id = ? AND uploaded_user_id = ?", id, ctx.GetString("user_id")).Delete(&models.LearningResource{})
+	return result.RowsAffected > 0, result.Error
+}
+
+func (s *LearningResourceService) deleteOwned(ctx *gin.Context, id string) (bool, error) {
+	var data models.LearningResource
+	if err := s.DB.Unscoped().Preload("ResourceFiles").Where("id = ? AND uploaded_user_id = ?", id, ctx.GetString("user_id")).First(&data).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	if err := s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("learning_resource_id = ?", data.ID).Delete(&models.LearningResourceGroup{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Unscoped().Where("learning_resource_id = ?", data.ID).Delete(&models.LearningResourceFile{}).Error; err != nil {
+			return err
+		}
+		return tx.Unscoped().Delete(&data).Error
+	}); err != nil {
+		return false, err
+	}
+	for _, file := range data.ResourceFiles {
+		deleteLearningResourceFiles([]string{file.URL})
+	}
 	return true, nil
 }

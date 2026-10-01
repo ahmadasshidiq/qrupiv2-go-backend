@@ -9,6 +9,7 @@ import (
 
 	"clasenna-go-backend/libs/cryptography"
 	"clasenna-go-backend/libs/helpers"
+	"clasenna-go-backend/libs/httpserver"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -30,7 +31,7 @@ func RegisterAllModules(router *gin.Engine, logger *slog.Logger) {
 			target = helpers.ConfigString("ACTIVITY_SERVICE_URL", "http://localhost:3006")
 		case isRegionRoute(path):
 			target = helpers.ConfigString("REGION_SERVICE_URL", "http://localhost:3007")
-		case strings.HasPrefix(path, "/notifications/"):
+		case path == "/notifications" || strings.HasPrefix(path, "/notifications/"):
 			target = helpers.ConfigString("NOTIFICATION_SERVICE_URL", "http://localhost:3004")
 		case strings.HasPrefix(path, "/reports/"):
 			target = helpers.ConfigString("REPORTING_SERVICE_URL", "http://localhost:3005")
@@ -102,12 +103,16 @@ func isPublicRoute(method, path string) bool {
 func authorize(c *gin.Context) bool {
 	tokenString, ok := extractToken(c.GetHeader("Authorization"))
 	if !ok {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "bearer token required"})
+		tokenString, _ = c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"))
+		ok = tokenString != ""
+	}
+	if !ok {
+		httpserver.SafeError(c, http.StatusUnauthorized, "UNAUTHORIZED", "Sesi Anda telah berakhir. Silakan login kembali.")
 		return false
 	}
 	_, claims, err := cryptography.ValidateToken(tokenString)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
+		httpserver.SafeError(c, http.StatusUnauthorized, "UNAUTHORIZED", "Sesi Anda telah berakhir. Silakan login kembali.")
 		return false
 	}
 	c.Request.Header.Set("Authorization", "Bearer "+tokenString)

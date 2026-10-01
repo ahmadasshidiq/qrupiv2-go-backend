@@ -631,7 +631,7 @@ func (s *Aggregator) fetch(ctx context.Context, headers http.Header, path string
 	}
 	resp, err := s.Client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("request to %s failed: %w", req.URL.String(), err)
 	}
 	defer resp.Body.Close()
 	b, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))

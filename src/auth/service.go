@@ -25,6 +25,10 @@ type AuthService struct {
 	Events   EventPublisher
 }
 
+func (s *AuthService) Logout(ctx context.Context, userID string) error {
+	return s.DB.WithContext(ctx).Model(&models.User{}).Where("id = ?", userID).Update("current_token", "").Error
+}
+
 func NewAuthService(db *gorm.DB, events ...EventPublisher) *AuthService {
 	service := &AuthService{DB: db, Notifier: notif.NewPublisherFromEnv()}
 	if len(events) > 0 {

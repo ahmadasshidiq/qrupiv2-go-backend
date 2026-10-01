@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -97,22 +98,22 @@ func (s *QuizSessionService) memberScope(ctx *gin.Context) (string, error) {
 	) session_scope on session_scope.id = qs.id`, id), nil
 }
 
-func (s *QuizSessionService) getByID(id string) (*models.QuizSession, error) {
+func (s *QuizSessionService) getByID(ctx *gin.Context, id string) (*models.QuizSession, error) {
 	var data models.QuizSession
-	err := s.DB.Preload("Quiz").Preload("User").First(&data, "id = ?", id).Error
+	err := s.DB.Preload("Quiz").Preload("User").Where("id = ? AND user_id = ?", id, ctx.GetString("user_id")).First(&data).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	return &data, err
 }
 
-func (s *QuizSessionService) create(dto CreateDTO) (*models.QuizSession, error) {
+func (s *QuizSessionService) create(ctx *gin.Context, dto CreateDTO) (*models.QuizSession, error) {
 	quizID, err := uuid.Parse(dto.QuizID)
 	if err != nil {
 		return nil, errors.New("invalid quiz_id format")
 	}
 
-	userID, err := uuid.Parse(dto.UserID)
+	userID, err := uuid.Parse(ctx.GetString("user_id"))
 	if err != nil {
 		return nil, errors.New("invalid created_user_id format")
 	}
@@ -168,10 +169,19 @@ func (s *QuizSessionService) delete(id string) (bool, error) {
 	return result.RowsAffected > 0, result.Error
 }
 
-func (s *QuizSessionService) update(id string, dto UpdateDTO) (*models.QuizSession, error) {
+func (s *QuizSessionService) removeForUser(ctx *gin.Context, id string, permanent bool) (bool, error) {
+	query := s.DB.Where("id = ? AND user_id = ?", id, ctx.GetString("user_id"))
+	if permanent {
+		query = query.Unscoped()
+	}
+	result := query.Delete(&models.QuizSession{})
+	return result.RowsAffected > 0, result.Error
+}
+
+func (s *QuizSessionService) update(ctx *gin.Context, id string, dto UpdateDTO) (*models.QuizSession, error) {
 	var data models.QuizSession
 
-	if err := s.DB.First(&data, "id = ?", id).Error; err != nil {
+	if err := s.DB.Preload("Quiz").First(&data, "id = ? AND user_id = ?", id, ctx.GetString("user_id")).Error; err != nil {
 		return nil, errors.New("quiz session not found")
 	}
 
@@ -196,15 +206,32 @@ func (s *QuizSessionService) update(id string, dto UpdateDTO) (*models.QuizSessi
 	}
 
 	if dto.Answers != nil {
-		b, err := json.Marshal(dto.Answers)
+		questionMap := make(map[string]models.QuizQuestion)
+		for index, question := range data.Quiz.QuizQuestions {
+			questionMap[strconv.Itoa(index)] = question
+			questionMap[question.QuestionText] = question
+		}
+		answers := make([]models.Answer, 0, len(*dto.Answers))
+		score := 0.0
+		for _, answer := range *dto.Answers {
+			question, ok := questionMap[answer.QuestionID]
+			if !ok {
+				continue
+			}
+			correct := answer.SelectedAnswer == question.CorrectAnswer
+			points := 0
+			if correct {
+				points = question.Points
+				score += float64(points)
+			}
+			answers = append(answers, models.Answer{QuestionID: answer.QuestionID, SelectedAnswer: answer.SelectedAnswer, IsCorrect: correct, PointsEarned: points})
+		}
+		b, err := json.Marshal(answers)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal answers: %w", err)
 		}
 		data.Answers = datatypes.JSON(b)
-	}
-
-	if dto.Score != nil {
-		data.Score = *dto.Score
+		data.Score = score
 	}
 
 	if dto.DeviceInfo != nil {

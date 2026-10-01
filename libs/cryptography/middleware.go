@@ -19,7 +19,7 @@ func (m *AccessMiddleware) Handler(modelName string, action string) gin.HandlerF
 	return func(ctx *gin.Context) {
 		roleIDVal, exists := ctx.Get("role_id")
 		if !exists {
-			res := helpers.FormatResponse(ctx.Request.Method, "auth", http.StatusBadRequest, "Role ID is missing", nil, nil)
+			res := helpers.FormatResponse(ctx.Request.Method, "auth", http.StatusUnauthorized, gin.H{"error": "UNAUTHORIZED", "message": "Sesi Anda telah berakhir. Silakan login kembali."}, nil, nil)
 			ctx.JSON(http.StatusUnauthorized, res)
 			ctx.Abort()
 			return
@@ -36,7 +36,7 @@ func (m *AccessMiddleware) Handler(modelName string, action string) gin.HandlerF
 		var role models.Role
 		if err := m.DB.First(&role, "id = ?", roleID).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
-				res := helpers.FormatResponse(ctx.Request.Method, "auth", http.StatusForbidden, "Role not found", nil, nil)
+				res := helpers.FormatResponse(ctx.Request.Method, "auth", http.StatusForbidden, gin.H{"error": "FORBIDDEN", "message": "Anda tidak memiliki izin mengakses data ini."}, nil, nil)
 				ctx.JSON(http.StatusForbidden, res)
 				ctx.Abort()
 				return
@@ -64,7 +64,7 @@ func (m *AccessMiddleware) Handler(modelName string, action string) gin.HandlerF
 		}
 
 		if !allowed {
-			res := helpers.FormatResponse(ctx.Request.Method, "auth", http.StatusForbidden, "Access denied", nil, nil)
+			res := helpers.FormatResponse(ctx.Request.Method, "auth", http.StatusForbidden, gin.H{"error": "FORBIDDEN", "message": "Anda tidak memiliki izin mengakses data ini."}, nil, nil)
 			ctx.JSON(http.StatusForbidden, res)
 			ctx.Abort()
 			return

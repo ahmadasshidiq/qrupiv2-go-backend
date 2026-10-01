@@ -38,8 +38,10 @@ func (c *DashboardController) dashboard(ctx *gin.Context, expectedRole string) {
 		status := http.StatusBadGateway
 		if strings.HasPrefix(err.Error(), "dashboard endpoint requires role") {
 			status = http.StatusForbidden
+			ctx.JSON(status, gin.H{"code": status, "error": "FORBIDDEN", "message": "Anda tidak memiliki izin mengakses dashboard ini.", "status": "error"})
+			return
 		}
-		helpers.RespondError(ctx, "dashboard", status, err)
+		ctx.JSON(status, gin.H{"code": status, "error": "SERVER_ERROR", "message": "Terjadi kesalahan pada server. Silakan coba lagi.", "status": "error"})
 		return
 	}
 	helpers.RespondSuccess(ctx, "dashboard", http.StatusOK, r)

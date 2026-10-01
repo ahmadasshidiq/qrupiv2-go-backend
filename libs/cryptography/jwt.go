@@ -1,6 +1,7 @@
 package cryptography
 
 import (
+	"clasenna-go-backend/libs/helpers"
 	"clasenna-go-backend/libs/models"
 	"fmt"
 	"net/http"
@@ -68,17 +69,24 @@ func ValidateToken(tokenString string) (*jwt.Token, jwt.MapClaims, error) {
 func JWTMiddleware(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
-			c.Set("auth_error", "Authorization header is required")
+		tokenString := ""
+		if authHeader != "" {
+			tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(authHeader, "Bearer "), "bearer "))
+		}
+		// Cookie is the primary transport. Header support is retained temporarily
+		// for existing clients during the frontend migration.
+		if tokenString == "" {
+			tokenString, _ = c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"))
+		}
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "UNAUTHORIZED", "message": "Sesi Anda telah berakhir. Silakan login kembali."})
+			c.Set("auth_error", "authentication is required")
 			c.Abort()
 			return
 		}
-
-		tokenString := strings.TrimSpace(strings.Replace(authHeader, "Bearer", "", 1))
 		token, claims, err := ValidateToken(tokenString)
 		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "UNAUTHORIZED", "message": "Sesi Anda telah berakhir. Silakan login kembali."})
 			c.Abort()
 			return
 		}

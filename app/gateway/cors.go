@@ -13,7 +13,7 @@ func newCORSConfig() cors.Config {
 	config := cors.Config{
 		AllowOrigins:     helpers.ConfigStrings("CORS_ALLOWED_ORIGINS", "http://localhost:4000"),
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Request-ID", "X-Correlation-ID"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-CSRF-Token", "X-Request-ID", "X-Correlation-ID"},
 		ExposeHeaders:    []string{"X-Request-ID", "X-Correlation-ID"},
 		AllowCredentials: true,
 	}

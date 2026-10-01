@@ -41,7 +41,7 @@ func (c *LearningResourceController) GetAll(ctx *gin.Context) {
 // @Security BearerAuth
 // @Router /learning-resources/{id} [get]
 func (c *LearningResourceController) GetByID(ctx *gin.Context) {
-	data, err := c.Service.getByID(ctx.Param("id"))
+	data, err := c.Service.getByID(ctx, ctx.Param("id"))
 	if err != nil {
 		helpers.RespondError(ctx, "learning-resources", http.StatusInternalServerError, err)
 		return
@@ -114,7 +114,7 @@ func (c *LearningResourceController) Update(ctx *gin.Context) {
 // @Security BearerAuth
 // @Router /learning-resources/{id}/archived [delete]
 func (c *LearningResourceController) Archive(ctx *gin.Context) {
-	helpers.HandleRemove(ctx, "learning-resources", c.Service.archive)
+	helpers.HandleRemove(ctx, "learning-resources", func(id string) (bool, error) { return c.Service.removeForUser(ctx, id, false) })
 }
 
 // @Summary Delete Learning Resource permanently
@@ -123,5 +123,5 @@ func (c *LearningResourceController) Archive(ctx *gin.Context) {
 // @Security BearerAuth
 // @Router /learning-resources/{id} [delete]
 func (c *LearningResourceController) Delete(ctx *gin.Context) {
-	helpers.HandleRemove(ctx, "learning-resources", c.Service.delete)
+	helpers.HandleRemove(ctx, "learning-resources", func(id string) (bool, error) { return c.Service.removeForUser(ctx, id, true) })
 }

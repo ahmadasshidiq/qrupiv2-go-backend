@@ -37,6 +37,9 @@ func (s *LearningGroupService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*he
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" && !s.isSuperAdmin(ctx) {
 		params["lg.institution_id"] = institutionID
 	}
+	if err := helpers.ApplyRegionScope(ctx, params, "i"); err != nil {
+		return nil, err
+	}
 
 	memberJoin := ""
 	studentJoin := ""

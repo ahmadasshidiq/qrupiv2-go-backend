@@ -34,7 +34,6 @@ type Answer struct {
 
 type CreateDTO struct {
 	QuizID     string    `json:"quiz_id" binding:"required,uuid"`
-	UserID     string    `json:"user_id" binding:"required,uuid"`
 	DeviceInfo string    `json:"device_info" binding:"omitempty"`
 	StartTime  time.Time `json:"start_time" binding:"required"`
 }

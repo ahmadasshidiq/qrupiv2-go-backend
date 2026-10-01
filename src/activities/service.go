@@ -179,6 +179,9 @@ func (s *ActivityService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" && !s.isSuperAdmin(ctx) {
 		params["a.institution_id"] = institutionID
 	}
+	if err := helpers.ApplyRegionScope(ctx, params, "i"); err != nil {
+		return nil, err
+	}
 	teacherWhere, err := s.teacherScope(ctx)
 	if err != nil {
 		return nil, err

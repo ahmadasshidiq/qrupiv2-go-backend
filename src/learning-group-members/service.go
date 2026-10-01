@@ -35,6 +35,9 @@ func (s *LearningGroupMemberService) getAll(ctx *gin.Context, dto DefaultFindDTO
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" && !helpers.IsRole(role, "super_admin") {
 		params["lg.institution_id"] = institutionID
 	}
+	if err := helpers.ApplyRegionScope(ctx, params, "i"); err != nil {
+		return nil, err
+	}
 
 	baseQuery := `
 		select

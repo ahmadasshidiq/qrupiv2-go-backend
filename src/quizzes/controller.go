@@ -41,7 +41,7 @@ func (c *QuizController) GetAll(ctx *gin.Context) {
 // @Security BearerAuth
 // @Router /quizzes/{id} [get]
 func (c *QuizController) GetByID(ctx *gin.Context) {
-	data, err := c.Service.getByID(ctx.Param("id"))
+	data, err := c.Service.getByID(ctx, ctx.Param("id"))
 	if err != nil {
 		helpers.RespondError(ctx, "quizzes", http.StatusInternalServerError, err)
 		return
@@ -102,7 +102,7 @@ func (c *QuizController) Update(ctx *gin.Context) {
 // @Security BearerAuth
 // @Router /quizzes/{id}/archived [delete]
 func (c *QuizController) Archive(ctx *gin.Context) {
-	helpers.HandleRemove(ctx, "quizzes", c.Service.archive)
+	helpers.HandleRemove(ctx, "quizzes", func(id string) (bool, error) { return c.Service.removeForUser(ctx, id, false) })
 }
 
 // @Summary Delete Quiz permanently
@@ -111,5 +111,5 @@ func (c *QuizController) Archive(ctx *gin.Context) {
 // @Security BearerAuth
 // @Router /quizzes/{id} [delete]
 func (c *QuizController) Delete(ctx *gin.Context) {
-	helpers.HandleRemove(ctx, "quizzes", c.Service.delete)
+	helpers.HandleRemove(ctx, "quizzes", func(id string) (bool, error) { return c.Service.removeForUser(ctx, id, true) })
 }

@@ -66,7 +66,7 @@ func (c *QuizSessionController) GetRankings(ctx *gin.Context) {
 // @Security BearerAuth
 // @Router /quiz-sessions/{id} [get]
 func (c *QuizSessionController) GetByID(ctx *gin.Context) {
-	data, err := c.Service.getByID(ctx.Param("id"))
+	data, err := c.Service.getByID(ctx, ctx.Param("id"))
 	if err != nil {
 		helpers.RespondError(ctx, "quiz-sessions", http.StatusInternalServerError, err)
 		return
@@ -89,7 +89,7 @@ func (c *QuizSessionController) Create(ctx *gin.Context) {
 		helpers.RespondError(ctx, "quiz-sessions", http.StatusBadRequest, err)
 		return
 	}
-	data, err := c.Service.create(dto)
+	data, err := c.Service.create(ctx, dto)
 	if err != nil {
 		helpers.RespondError(ctx, "quiz-sessions", http.StatusInternalServerError, err)
 		return
@@ -109,7 +109,7 @@ func (c *QuizSessionController) Update(ctx *gin.Context) {
 		helpers.RespondError(ctx, "quiz-sessions", http.StatusBadRequest, err)
 		return
 	}
-	data, err := c.Service.update(ctx.Param("id"), dto)
+	data, err := c.Service.update(ctx, ctx.Param("id"), dto)
 	if err != nil {
 		helpers.RespondError(ctx, "quiz-sessions", http.StatusInternalServerError, err)
 		return
@@ -127,7 +127,7 @@ func (c *QuizSessionController) Update(ctx *gin.Context) {
 // @Security BearerAuth
 // @Router /quiz-sessions/{id}/archived [delete]
 func (c *QuizSessionController) Archive(ctx *gin.Context) {
-	helpers.HandleRemove(ctx, "quiz-sessions", c.Service.archive)
+	helpers.HandleRemove(ctx, "quiz-sessions", func(id string) (bool, error) { return c.Service.removeForUser(ctx, id, false) })
 }
 
 // @Summary Delete Quiz Session permanently
@@ -136,5 +136,5 @@ func (c *QuizSessionController) Archive(ctx *gin.Context) {
 // @Security BearerAuth
 // @Router /quiz-sessions/{id} [delete]
 func (c *QuizSessionController) Delete(ctx *gin.Context) {
-	helpers.HandleRemove(ctx, "quiz-sessions", c.Service.delete)
+	helpers.HandleRemove(ctx, "quiz-sessions", func(id string) (bool, error) { return c.Service.removeForUser(ctx, id, true) })
 }

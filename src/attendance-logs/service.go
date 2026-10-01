@@ -29,6 +29,9 @@ func (s *AttendanceLogService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*he
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
 		params["u.institution_id"] = institutionID
 	}
+	if err := helpers.ApplyRegionScope(ctx, params, "i"); err != nil {
+		return nil, err
+	}
 	scopeJoin, err := s.teacherScope(ctx)
 	if err != nil {
 		return nil, err
@@ -40,6 +43,7 @@ func (s *AttendanceLogService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*he
 		join users u on u.id = al.user_id
 		left join users ru on ru.id = al.recorded_user_id
 		left join learning_groups lg on lg.id = al.learning_group_id and lg.deleted_at is null
+		join institutions i on i.id = u.institution_id
 		left join attendance_absence_reasons ar on ar.id = al.absence_reason_id and ar.deleted_at is null
 		%s`, scopeJoin)
 	return helpers.BuildPaginatedQuery(ctx, s.DB, params, "attendance_logs", base, "", "", dto.SortBy)

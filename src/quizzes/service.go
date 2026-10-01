@@ -71,8 +71,27 @@ func (s *QuizService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 	if err != nil {
 		return nil, err
 	}
+	var role string
+	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
+		return nil, err
+	}
+	if helpers.IsRole(role, "student") {
+		sanitizeQuizResults(result)
+	}
 
 	return result, nil
+}
+
+func sanitizeQuizResults(result *helpers.PaginatedResult) {
+	for _, row := range result.Data {
+		if questions, ok := row["quiz_questions"].([]interface{}); ok {
+			for _, item := range questions {
+				if question, ok := item.(map[string]interface{}); ok {
+					delete(question, "correct_answer")
+				}
+			}
+		}
+	}
 }
 
 func (s *QuizService) viewerScope(ctx *gin.Context) (string, error) {
@@ -107,13 +126,25 @@ func (s *QuizService) viewerScope(ctx *gin.Context) (string, error) {
 	) quiz_scope on quiz_scope.id = q.id`, id, id), nil
 }
 
-func (s *QuizService) getByID(id string) (*models.Quiz, error) {
+func (s *QuizService) getByID(ctx *gin.Context, id string) (*models.Quiz, error) {
 	var data models.Quiz
 	err := s.DB.Preload("Institution").Preload("LearningGroup").Preload("CreatedUser").First(&data, "id = ?", id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
-	return &data, err
+	if err != nil {
+		return &data, err
+	}
+	var role string
+	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
+		return nil, err
+	}
+	if helpers.IsRole(role, "student") {
+		for i := range data.QuizQuestions {
+			data.QuizQuestions[i].CorrectAnswer = ""
+		}
+	}
+	return &data, nil
 }
 
 func (s *QuizService) create(dto CreateDTO) (*models.Quiz, error) {
@@ -259,5 +290,14 @@ func (s *QuizService) archive(id string) (bool, error) {
 
 func (s *QuizService) delete(id string) (bool, error) {
 	result := s.DB.Unscoped().Where("id = ?", id).Delete(&models.Quiz{})
+	return result.RowsAffected > 0, result.Error
+}
+
+func (s *QuizService) removeForUser(ctx *gin.Context, id string, permanent bool) (bool, error) {
+	query := s.DB.Where("id = ? AND created_user_id = ?", id, ctx.GetString("user_id"))
+	if permanent {
+		query = query.Unscoped()
+	}
+	result := query.Delete(&models.Quiz{})
 	return result.RowsAffected > 0, result.Error
 }
