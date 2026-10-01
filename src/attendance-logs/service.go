@@ -54,11 +54,11 @@ func (s *AttendanceLogService) teacherScope(ctx *gin.Context) (string, error) {
 	if userID == "" {
 		return "", nil
 	}
-	var user models.User
-	if err := s.DB.Select("type").First(&user, "id = ?", userID).Error; err != nil {
+	var role string
+	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
 		return "", err
 	}
-	if user.Type != "teacher" {
+	if !helpers.IsRole(role, "teacher") {
 		return "", nil
 	}
 	id, err := uuid.Parse(userID)

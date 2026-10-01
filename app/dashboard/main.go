@@ -20,12 +20,11 @@ import (
 
 func dashboardAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := ""
-		if header := c.GetHeader("Authorization"); header != "" {
-			token = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(header, "Bearer "), "bearer "))
-		}
+		token, _ := c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"))
 		if token == "" {
-			token, _ = c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"))
+			if header := c.GetHeader("Authorization"); header != "" {
+				token = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(header, "Bearer "), "bearer "))
+			}
 		}
 		_, claims, err := cryptography.ValidateToken(token)
 		if err != nil {

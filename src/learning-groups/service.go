@@ -5,7 +5,6 @@ import (
 	"clasenna-go-backend/libs/models"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -125,12 +124,14 @@ func (s *LearningGroupService) authenticatedMemberID(ctx *gin.Context) (string, 
 		return "", false, errors.New("user_id is missing from authenticated session")
 	}
 
-	var user models.User
-	if err := s.DB.Select("type").First(&user, "id = ?", userID).Error; err != nil {
+	var role string
+	if err := s.DB.Table("roles").
+		Select("lower(replace(name, '-', '_'))").
+		Where("id = ?", ctx.GetString("role_id")).
+		Scan(&role).Error; err != nil {
 		return "", false, err
 	}
-	userType := strings.ToLower(strings.TrimSpace(user.Type))
-	if userType != "student" && userType != "teacher" {
+	if !helpers.IsRole(role, "student") && !helpers.IsRole(role, "instructor") && !helpers.IsRole(role, "teacher") {
 		return "", false, nil
 	}
 	return userID, true, nil

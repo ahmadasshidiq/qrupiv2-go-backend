@@ -10,6 +10,7 @@ import (
 	"clasenna-go-backend/libs/cryptography"
 	"clasenna-go-backend/libs/helpers"
 	"clasenna-go-backend/libs/httpserver"
+
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -101,10 +102,10 @@ func isPublicRoute(method, path string) bool {
 }
 
 func authorize(c *gin.Context) bool {
-	tokenString, ok := extractToken(c.GetHeader("Authorization"))
+	tokenString, _ := c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"))
+	ok := tokenString != ""
 	if !ok {
-		tokenString, _ = c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"))
-		ok = tokenString != ""
+		tokenString, ok = extractToken(c.GetHeader("Authorization"))
 	}
 	if !ok {
 		httpserver.SafeError(c, http.StatusUnauthorized, "UNAUTHORIZED", "Sesi Anda telah berakhir. Silakan login kembali.")

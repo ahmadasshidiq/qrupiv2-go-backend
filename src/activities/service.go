@@ -207,11 +207,11 @@ func (s *ActivityService) teacherScope(ctx *gin.Context) (string, error) {
 	if userID == "" {
 		return "", nil
 	}
-	var user models.User
-	if err := s.DB.Select("type").First(&user, "id = ?", userID).Error; err != nil {
+	var role string
+	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
 		return "", err
 	}
-	if user.Type != "teacher" {
+	if !helpers.IsRole(role, "teacher") {
 		return "", nil
 	}
 	id, err := uuid.Parse(userID)
@@ -237,11 +237,11 @@ func (s *ActivityService) isSuperAdmin(ctx *gin.Context) bool {
 }
 
 func (s *ActivityService) applyViewerScope(ctx *gin.Context, params map[string]interface{}) error {
-	var user models.User
-	if err := s.DB.Select("type").First(&user, "id = ?", ctx.GetString("user_id")).Error; err != nil {
+	var role string
+	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
 		return err
 	}
-	if user.Type == "student" {
+	if helpers.IsRole(role, "student") {
 		params["a.user_id"] = ctx.GetString("user_id")
 	}
 	return nil

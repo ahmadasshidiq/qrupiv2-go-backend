@@ -99,18 +99,18 @@ func (s *QuizService) viewerScope(ctx *gin.Context) (string, error) {
 	if userID == "" {
 		return "", nil
 	}
-	var user models.User
-	if err := s.DB.Select("type").First(&user, "id = ?", userID).Error; err != nil {
+	var role string
+	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
 		return "", err
 	}
-	if user.Type != "teacher" && user.Type != "student" {
+	if !helpers.IsRole(role, "teacher") && !helpers.IsRole(role, "student") {
 		return "", nil
 	}
 	id, err := uuid.Parse(userID)
 	if err != nil {
 		return "", errors.New("invalid authenticated user id")
 	}
-	if user.Type == "student" {
+	if helpers.IsRole(role, "student") {
 		return fmt.Sprintf(`join (select distinct q_scope.id
 			from quizzes q_scope
 			join learning_group_members quiz_lgm on quiz_lgm.learning_group_id = q_scope.learning_group_id

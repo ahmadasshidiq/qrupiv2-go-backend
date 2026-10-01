@@ -68,15 +68,12 @@ func ValidateToken(tokenString string) (*jwt.Token, jwt.MapClaims, error) {
 
 func JWTMiddleware(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		tokenString := ""
-		if authHeader != "" {
-			tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(authHeader, "Bearer "), "bearer "))
-		}
-		// Cookie is the primary transport. Header support is retained temporarily
-		// for existing clients during the frontend migration.
+		tokenString, _ := c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"))
 		if tokenString == "" {
-			tokenString, _ = c.Cookie(helpers.ConfigString("AUTH_COOKIE_NAME", "qrupi_auth"))
+			authHeader := c.GetHeader("Authorization")
+			if authHeader != "" {
+				tokenString = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(authHeader, "Bearer "), "bearer "))
+			}
 		}
 		if tokenString == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "UNAUTHORIZED", "message": "Sesi Anda telah berakhir. Silakan login kembali."})
