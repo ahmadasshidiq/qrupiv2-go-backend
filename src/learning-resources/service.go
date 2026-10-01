@@ -90,8 +90,17 @@ func (s *LearningResourceService) getAll(ctx *gin.Context, dto DefaultFindDTO) (
 	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
 		return nil, err
 	}
+	// The authenticated role alone is not sufficient to identify a student
+	// viewer. Institution accounts can have an institution scope and may use a
+	// role configuration that resolves to the student role, but they must still
+	// be able to see all resources in that institution.
+	var userType string
+	if err := s.DB.Table("users").Select("type").Where("id = ?", ctx.GetString("user_id")).Scan(&userType).Error; err != nil {
+		return nil, err
+	}
+	isStudentViewer := helpers.IsRole(role, "student") && strings.EqualFold(userType, "student")
 	userID := ctx.GetString("user_id")
-	if helpers.IsRole(role, "student") {
+	if isStudentViewer {
 		params["viewer_lgm.user_id"] = userID
 		params["viewer_lgm.role_in_group"] = "student"
 	}
@@ -103,7 +112,7 @@ func (s *LearningResourceService) getAll(ctx *gin.Context, dto DefaultFindDTO) (
 		params["i.id"] = institutionID
 	}
 	viewerJoin := "left join learning_group_members viewer_lgm on viewer_lgm.learning_group_id = lrg.learning_group_id and viewer_lgm.deleted_at is null"
-	if !helpers.IsRole(role, "student") && !helpers.IsRole(role, "instructor") {
+	if !isStudentViewer && !helpers.IsRole(role, "instructor") {
 		viewerJoin = "left join learning_group_members viewer_lgm on false"
 	}
 	baseQuery := `select lr.id, lr.title, lr.description, lr.type, lr.uploaded_user_id,
