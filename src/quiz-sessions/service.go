@@ -100,7 +100,22 @@ func (s *QuizSessionService) memberScope(ctx *gin.Context) (string, error) {
 
 func (s *QuizSessionService) getByID(ctx *gin.Context, id string) (*models.QuizSession, error) {
 	var data models.QuizSession
-	err := s.DB.Preload("Quiz").Preload("User").Where("id = ? AND user_id = ?", id, ctx.GetString("user_id")).First(&data).Error
+	query := s.DB.Preload("Quiz").Preload("User").Where("quiz_sessions.id = ?", id)
+
+	// Students may only view their own session. Teachers and admins may
+	// view sessions belonging to users in their institution.
+	var role string
+	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
+		return nil, err
+	}
+	canViewAny := helpers.IsRole(role, "teacher") || helpers.IsRole(role, "institution_admin") || helpers.IsRole(role, "super_admin") || helpers.IsRole(role, "dinas_pendidikan")
+	if !canViewAny {
+		query = query.Where("quiz_sessions.user_id = ?", ctx.GetString("user_id"))
+	} else if !helpers.IsRole(role, "super_admin") && ctx.GetString("institution_id") != "" {
+		query = query.Where("quiz_sessions.institution_id = ?", ctx.GetString("institution_id"))
+	}
+
+	err := query.First(&data).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
