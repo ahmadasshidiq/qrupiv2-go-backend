@@ -15,6 +15,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -151,6 +152,48 @@ func (s *AuthService) StudentVerifyPin(ctx context.Context, dto StudentVerifyPin
 	return map[string]interface{}{
 		"id": data.ID, "name": data.Name, "role": data.RoleID,
 		"avatar_profile_url": data.AvatarURL, "institution": data.Institution,
+		"token": token,
+	}, nil
+}
+
+// SwitchStudent issues a new student token without revoking the caller's token.
+// The caller must be an active non-student in the same institution as the target.
+func (s *AuthService) SwitchStudent(ctx context.Context, callerID string, dto SwitchStudentDTO, correlationID string) (map[string]interface{}, error) {
+	callerUUID, err := uuid.Parse(callerID)
+	if err != nil {
+		return nil, errors.New("invalid authenticated user")
+	}
+	targetUUID, err := uuid.Parse(dto.UserID)
+	if err != nil {
+		return nil, errors.New("invalid student user_id")
+	}
+
+	var caller, student models.User
+	if err := s.DB.WithContext(ctx).First(&caller, "id = ?", callerUUID).Error; err != nil || caller.Status != models.UserStatusActive || caller.Type == "student" || caller.InstitutionID == nil {
+		return nil, errors.New("account is not allowed to switch student session")
+	}
+	if err := s.DB.WithContext(ctx).Preload("Role").Preload("Institution").First(&student, "id = ? AND type = ? AND status = ?", targetUUID, "student", models.UserStatusActive).Error; err != nil {
+		return nil, errors.New("student account not found")
+	}
+	if student.InstitutionID == nil || *student.InstitutionID != *caller.InstitutionID || student.Institution == nil || student.Institution.Status != models.InstitutionStatusActive {
+		return nil, errors.New("student account is outside the caller institution")
+	}
+
+	token, err := cryptography.GenerateTokenWithScope(student.ID.String(), student.Email, student.RoleID.String(), student.InstitutionID.String(), student.RegionLevel, student.RegionCode, 12*time.Hour)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.DB.WithContext(ctx).Model(&student).Update("current_token", token).Error; err != nil {
+		return nil, err
+	}
+	if s.Events != nil {
+		if err := s.Events.Publish(ctx, "auth.login", student.InstitutionID.String(), correlationID, map[string]any{"user_id": student.ID, "method": "student_switch", "switched_by": caller.ID}); err != nil {
+			slog.ErrorContext(ctx, "failed to publish student switch", "error", err, "user_id", student.ID)
+		}
+	}
+	return map[string]interface{}{
+		"id": student.ID, "name": student.Name, "role": student.RoleID,
+		"avatar_profile_url": student.AvatarURL, "institution": student.Institution,
 		"token": token,
 	}, nil
 }

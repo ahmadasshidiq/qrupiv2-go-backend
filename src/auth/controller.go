@@ -120,6 +120,25 @@ func (c *AuthController) StudentVerifyPin(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, helpers.FormatResponse(ctx.Request.Method, "student-verify-pin", http.StatusOK, data, nil, nil))
 }
 
+// @Summary      Switch the active session to a student
+// @Tags         Auth API
+// @Param        dto  body  SwitchStudentDTO  true  "Student user ID"
+// @Router       /auth/student/switch [post]
+func (c *AuthController) SwitchStudent(ctx *gin.Context) {
+	var dto SwitchStudentDTO
+	if err := ctx.ShouldBindJSON(&dto); err != nil {
+		ctx.JSON(http.StatusBadRequest, helpers.FormatResponse(ctx.Request.Method, "student-switch", http.StatusBadRequest, nil, nil, err))
+		return
+	}
+	data, err := c.service.SwitchStudent(ctx.Request.Context(), ctx.GetString("user_id"), dto, ctx.GetString("correlation_id"))
+	if err != nil {
+		ctx.JSON(http.StatusForbidden, helpers.FormatResponse(ctx.Request.Method, "student-switch", http.StatusForbidden, nil, nil, err))
+		return
+	}
+	setAuthCookie(ctx, data)
+	ctx.JSON(http.StatusOK, helpers.FormatResponse(ctx.Request.Method, "student-switch", http.StatusOK, data, nil, nil))
+}
+
 // Logout revokes the active token and clears authentication cookies.
 func (c *AuthController) Logout(ctx *gin.Context) {
 	if err := c.service.Logout(ctx.Request.Context(), ctx.GetString("user_id")); err != nil {

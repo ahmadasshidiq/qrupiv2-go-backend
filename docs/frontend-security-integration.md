@@ -8,6 +8,7 @@ Endpoint berikut membuat session autentikasi:
 
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/student/verify-pin`
+- `POST /api/v1/auth/student/switch`
 
 Backend mengirim cookie bernama `qrupi_auth` dengan atribut:
 
@@ -77,6 +78,8 @@ await fetch(`${API_URL}/api/v1/auth/logout`, {
 });
 ```
 
+Untuk berpindah ke akun anak, kirim `POST /api/v1/auth/student/switch` dengan body `{ "user_id": "child-user-id" }` dan header CSRF. Backend mengganti cookie `qrupi_auth` ke session student serta menerbitkan `qrupi_csrf` baru; session parent tetap aktif di backend. Saat ini validasi menggunakan akun non-student aktif dan institusi yang sama karena model belum memiliki relasi parent-child eksplisit.
+
 ## 5. CSP dan iframe
 
 Gateway mengirim header `Content-Security-Policy` dengan aturan utama:
@@ -101,6 +104,7 @@ Local development:
 
 ```env
 AUTH_COOKIE_NAME=qrupi_auth
+CSRF_COOKIE_NAME_PELAJAR=qrupi_pelajar_csrf
 AUTH_COOKIE_SECURE=false
 AUTH_COOKIE_PERSIST=false
 CORS_ALLOWED_ORIGINS=http://localhost:5173

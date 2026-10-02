@@ -23,6 +23,10 @@ type StudentVerifyPinDTO struct {
 	Pin    string `json:"pin" binding:"required,numeric,min=4,max=8"`
 }
 
+type SwitchStudentDTO struct {
+	UserID string `json:"user_id" binding:"required,uuid"`
+}
+
 type ResetPasswordDTO struct {
 	UserID      string `json:"user_id" binding:"required,uuid"`
 	Password    string `json:"password" binding:"required,min=6"`
