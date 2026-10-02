@@ -224,6 +224,7 @@ func (s *QuizSessionService) update(ctx *gin.Context, id string, dto UpdateDTO) 
 		questionMap := make(map[string]models.QuizQuestion)
 		for index, question := range data.Quiz.QuizQuestions {
 			questionMap[strconv.Itoa(index)] = question
+			questionMap[fmt.Sprintf("question-%d", index+1)] = question
 			questionMap[question.QuestionText] = question
 		}
 		answers := make([]models.Answer, 0, len(*dto.Answers))
