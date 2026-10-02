@@ -157,7 +157,7 @@ func (s *AuthService) StudentVerifyPin(ctx context.Context, dto StudentVerifyPin
 }
 
 // SwitchStudent issues a new student token without revoking the caller's token.
-// The caller must be an active non-student in the same institution as the target.
+// The caller and target must be active users in the same institution.
 func (s *AuthService) SwitchStudent(ctx context.Context, callerID string, dto SwitchStudentDTO, correlationID string) (map[string]interface{}, error) {
 	callerUUID, err := uuid.Parse(callerID)
 	if err != nil {
@@ -169,7 +169,7 @@ func (s *AuthService) SwitchStudent(ctx context.Context, callerID string, dto Sw
 	}
 
 	var caller, student models.User
-	if err := s.DB.WithContext(ctx).First(&caller, "id = ?", callerUUID).Error; err != nil || caller.Status != models.UserStatusActive || caller.Type == "student" || caller.InstitutionID == nil {
+	if err := s.DB.WithContext(ctx).First(&caller, "id = ?", callerUUID).Error; err != nil || caller.Status != models.UserStatusActive || caller.InstitutionID == nil {
 		return nil, errors.New("account is not allowed to switch student session")
 	}
 	if err := s.DB.WithContext(ctx).Preload("Role").Preload("Institution").First(&student, "id = ? AND type = ? AND status = ?", targetUUID, "student", models.UserStatusActive).Error; err != nil {
