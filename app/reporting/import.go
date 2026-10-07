@@ -223,8 +223,22 @@ func (s *ImportService) importRow(r []string, scopedInstitution string) error {
 	}
 	var count int64
 	s.DB.Model(&models.User{}).Where("email=?", email).Count(&count)
-	if count > 0 {
+	if email != "" && count > 0 {
 		return fmt.Errorf("email '%s' sudah terpakai", email)
+	}
+	if userType == "student" || userType == "admin" || userType == "teacher" {
+		var nameCount int64
+		s.DB.Model(&models.User{}).Where("LOWER(name)=LOWER(?) AND deleted_at IS NULL", name).Count(&nameCount)
+		if nameCount > 0 {
+			return fmt.Errorf("nama '%s' sudah terpakai", name)
+		}
+	}
+	if contextCode != "" {
+		var contextCount int64
+		s.DB.Model(&models.User{}).Where("context_code = ? AND deleted_at IS NULL", contextCode).Count(&contextCount)
+		if contextCount > 0 {
+			return fmt.Errorf("context code '%s' sudah terpakai", contextCode)
+		}
 	}
 	if userType == "student" && (len(pin) != 6 || strings.Trim(pin, "0123456789") != "") {
 		return errors.New("PIN siswa harus tepat 6 digit angka")
