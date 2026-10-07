@@ -185,7 +185,7 @@ func (s *ImportService) importRow(r []string, scopedInstitution string) error {
 		}
 		return strings.TrimSpace(r[i])
 	}
-	name, email, roleName, password := get(0), get(1), get(2), get(3)
+	roleName, name, email, password := get(0), get(1), get(2), get(3)
 	institutionCode, phone, pin, contextType, contextCode, isActive, barcodeInput := get(4), get(5), get(6), get(7), get(8), strings.ToLower(get(9)), get(10)
 	if name == "" || roleName == "" || isActive == "" {
 		return errors.New("name,role_name,status wajib diisi")
@@ -205,7 +205,7 @@ func (s *ImportService) importRow(r []string, scopedInstitution string) error {
 		email = "student-" + uuid.NewString() + "@internal.qrupi"
 	}
 	if userType != "student" && password == "" {
-		return errors.New("password wajib diisi untuk role selain student")
+		return errors.New("password wajib diisi untuk role selain pelajar")
 	}
 	var inst *uuid.UUID
 	if scopedInstitution != "" {
@@ -298,7 +298,9 @@ func userTypeFromRole(n string) string {
 	switch strings.ToLower(strings.TrimSpace(n)) {
 	case "student", "siswa":
 		return "student"
-	case "teacher", "instructor", "guru":
+	case "pelajar":
+		return "student"
+	case "teacher", "instructor", "instruktur", "pengajar", "guru":
 		return "teacher"
 	case "admin", "super admin":
 		return "admin"
