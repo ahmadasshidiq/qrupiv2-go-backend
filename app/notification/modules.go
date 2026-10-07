@@ -106,10 +106,12 @@ func persistNotifications(ctx context.Context, db *gorm.DB, sender *notif.FCMSen
 		if err := db.WithContext(ctx).Create(&n).Error; err != nil {
 			return err
 		}
-		var devices []models.NotificationDevice
-		db.WithContext(ctx).Where("user_id = ? AND is_active = ?", userID, true).Find(&devices)
-		for _, d := range devices {
-			_, _ = sender.Send(ctx, d.Token, title, message, deeplink, webURL, mobileRoute, entityID)
+		if sender != nil {
+			var devices []models.NotificationDevice
+			db.WithContext(ctx).Where("user_id = ? AND is_active = ?", userID, true).Find(&devices)
+			for _, d := range devices {
+				_, _ = sender.Send(ctx, d.Token, title, message, deeplink, webURL, mobileRoute, entityID)
+			}
 		}
 	}
 	return nil

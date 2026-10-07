@@ -1,12 +1,14 @@
 package attendance_logs
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
 	"clasenna-go-backend/libs/helpers"
 	"clasenna-go-backend/libs/models"
+	notif "clasenna-go-backend/libs/notifications"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -14,9 +16,18 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type AttendanceLogService struct{ DB *gorm.DB }
+type AttendanceLogService struct {
+	DB       *gorm.DB
+	Notifier notif.Publisher
+}
 
-func NewService(db *gorm.DB) *AttendanceLogService { return &AttendanceLogService{DB: db} }
+func NewService(db *gorm.DB, notifier ...notif.Publisher) *AttendanceLogService {
+	s := &AttendanceLogService{DB: db}
+	if len(notifier) > 0 {
+		s.Notifier = notifier[0]
+	}
+	return s
+}
 
 func (s *AttendanceLogService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.PaginatedResult, error) {
 	params := make(map[string]interface{})
@@ -139,7 +150,20 @@ func (s *AttendanceLogService) create(ctx *gin.Context, dto CreateDTO) (*models.
 	}); err != nil {
 		return nil, err
 	}
+	if s.Notifier != nil {
+		go func() {
+			_ = s.Notifier.Publish(context.Background(), notif.Event{Type: notif.EventTypeAttendanceCreated, Scope: notif.EventScopeUser, Title: "Kehadiran tercatat", Message: "Data kehadiran kamu berhasil dicatat.", InstitutionID: userInstitutionID(s.DB, data.UserID), UserID: data.UserID.String(), RecipientIDs: []string{data.UserID.String()}, EntityID: data.ID.String(), CreatedAt: time.Now()})
+		}()
+	}
 	return &data, nil
+}
+
+func userInstitutionID(db *gorm.DB, userID uuid.UUID) string {
+	var u models.User
+	if db.Select("institution_id").First(&u, "id = ?", userID).Error != nil || u.InstitutionID == nil {
+		return ""
+	}
+	return u.InstitutionID.String()
 }
 
 func (s *AttendanceLogService) checkIn(ctx *gin.Context, dto CheckInDTO) (*models.AttendanceLog, error) {

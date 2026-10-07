@@ -2,13 +2,14 @@ package attendance_logs
 
 import (
 	"clasenna-go-backend/libs/cryptography"
+	notif "clasenna-go-backend/libs/notifications"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 func RegisterAttendanceLogModule(router *gin.RouterGroup, db *gorm.DB) {
-	controller := NewController(NewService(db))
+	controller := NewController(NewService(db, notif.NewPublisherFromEnv()))
 	permissions := cryptography.AccessMiddleware{DB: db}
 	group := router.Group("/attendance-logs")
 	group.Use(cryptography.JWTMiddleware(db))

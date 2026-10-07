@@ -3,9 +3,12 @@ package quizzes
 import (
 	"clasenna-go-backend/libs/helpers"
 	"clasenna-go-backend/libs/models"
+	notif "clasenna-go-backend/libs/notifications"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -13,11 +16,16 @@ import (
 )
 
 type QuizService struct {
-	DB *gorm.DB
+	DB       *gorm.DB
+	Notifier notif.Publisher
 }
 
-func NewService(db *gorm.DB) *QuizService {
-	return &QuizService{DB: db}
+func NewService(db *gorm.DB, notifier ...notif.Publisher) *QuizService {
+	s := &QuizService{DB: db}
+	if len(notifier) > 0 {
+		s.Notifier = notifier[0]
+	}
+	return s
 }
 
 func (s *QuizService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.PaginatedResult, error) {
@@ -211,6 +219,13 @@ func (s *QuizService) create(dto CreateDTO) (*models.Quiz, error) {
 
 	if err := s.DB.Create(&data).Error; err != nil {
 		return nil, err
+	}
+	if s.Notifier != nil {
+		var recipients []string
+		s.DB.Table("learning_group_members").Where("learning_group_id = ? AND role_in_group = ? AND deleted_at IS NULL", data.LearningGroupID, models.RoleInGroupStudent).Pluck("user_id", &recipients)
+		go func() {
+			_ = s.Notifier.Publish(context.Background(), notif.Event{Type: notif.EventTypeQuizCreated, Scope: notif.EventScopeUser, Title: "Quiz baru tersedia", Message: "Quiz baru tersedia di learning group kamu.", InstitutionID: data.InstitutionID.String(), RecipientIDs: recipients, EntityID: data.ID.String(), Data: map[string]interface{}{"title": data.Title}, CreatedAt: time.Now()})
+		}()
 	}
 
 	return &data, nil
