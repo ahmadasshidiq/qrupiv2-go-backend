@@ -551,30 +551,30 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 
 	headers := []string{
 		"Name *",
-		"Email *",
+		"Email * (Selain Pelajar)",
 		"Role Name *",
-		"Password * (Non-Student)",
+		"Password * (Selain Pelajar)",
 		"Institution Code",
 		"Phone",
-		"PIN (Student) *",
+		"PIN (Pelajar) *",
 		"Context Type",
 		"Context Code",
 		"Status *",
-		"Barcode (Student)",
+		"Barcode (Pelajar)",
 	}
 
 	headerComments := map[string]string{
 		"A1": "Wajib diisi. Isi nama lengkap user. Contoh: Ahmad Fauzi",
-		"B1": "Wajib diisi. Isi email aktif dengan format valid. Contoh: ahmad@gmail.com",
+		"B1": "Wajib untuk role selain Pelajar. Untuk Pelajar boleh dikosongkan. Jika kosong, sistem membuat email internal otomatis.",
 		"C1": "Wajib diisi. Pilih salah satu: Admin, Instruktur, Pelajar",
-		"D1": "Wajib untuk role selain Student. Untuk Student boleh dikosongkan. Contoh: Password123",
+		"D1": "Wajib untuk role selain Pelajar. Untuk Pelajar boleh dikosongkan. Contoh: Password123",
 		"E1": "Isi kode institusi. Kode dapat dilihat pada Dashboard.",
 		"F1": "Isi nomor telepon user.",
-		"G1": "Wajib untuk Student. Isi PIN tepat 6 digit angka.",
+		"G1": "Wajib untuk Pelajar. Isi PIN tepat 6 digit angka.",
 		"H1": "Opsional. Isi jenis konteks sesuai kebutuhan aplikasi.",
 		"I1": "Opsional. Isi kode konteks yang terkait.",
 		"J1": "Wajib diisi. Pilih salah satu: Active atau Inactive",
-		"K1": "Opsional untuk student. Jika kosong, barcode akan dibuat otomatis. Barcode harus unik.",
+		"K1": "Opsional untuk Pelajar. Jika kosong, barcode akan dibuat otomatis. Barcode harus unik.",
 	}
 
 	headerStyle, err := f.NewStyle(&excelize.Style{
@@ -633,16 +633,16 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 	// Baris kedua berisi petunjuk singkat; data dimulai dari baris ketiga.
 	guideRow := []string{
 		"Wajib diisi",
-		"Wajib, format email valid",
+		"Wajib selain Pelajar; Pelajar boleh kosong",
 		"Wajib: Admin/Instruktur/Pelajar",
-		"Wajib selain Student; Student boleh kosong",
+		"Wajib selain Pelajar; Pelajar boleh kosong",
 		"Opsional jika sudah ada institution scope",
 		"Opsional",
-		"Wajib Student, tepat 6 digit",
+		"Wajib Pelajar, tepat 6 digit",
 		"Opsional",
 		"Opsional",
 		"Wajib: active/inactive",
-		"Opsional Student; unik, kosong = otomatis",
+		"Opsional Pelajar; unik, kosong = otomatis",
 	}
 	guideStyle, err := f.NewStyle(&excelize.Style{Font: &excelize.Font{Italic: true, Color: "666666"}, Fill: excelize.Fill{Type: "pattern", Color: []string{"EDEDED"}, Pattern: 1}, Alignment: &excelize.Alignment{WrapText: true, Vertical: "center"}})
 	if err != nil {
@@ -741,7 +741,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		[]excelize.ConditionalFormatOptions{
 			{
 				Type:     "formula",
-				Criteria: `=AND(B2<>"",OR(ISERROR(SEARCH("@",B2)),ISERROR(SEARCH(".",B2))))`,
+				Criteria: `=AND(B3<>"",OR(ISERROR(SEARCH("@",B3)),ISERROR(SEARCH(".",B3))))`,
 				Format:   &invalidStyle,
 			},
 		},
@@ -769,7 +769,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		[]excelize.ConditionalFormatOptions{
 			{
 				Type:     "formula",
-				Criteria: `=AND(H2<>"",ISERROR(MATCH(H2,{"NIP","NIK","NIM"},0)))`,
+				Criteria: `=AND(H3<>"",ISERROR(MATCH(H3,{"NIP","NIK","NIM"},0)))`,
 				Format:   &invalidStyle,
 			},
 		},
@@ -782,7 +782,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		fmt.Sprintf("G%d:G%d", inputRangeStart, inputRangeEnd),
 		[]excelize.ConditionalFormatOptions{{
 			Type:     "formula",
-			Criteria: `=AND(C3="Student",OR(LEN(G3)<>6,NOT(ISNUMBER(--G3))))`,
+			Criteria: `=AND(C3="Pelajar",OR(LEN(G3)<>6,NOT(ISNUMBER(--G3))))`,
 			Format:   &invalidStyle,
 		}},
 	); err != nil {
@@ -795,7 +795,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		[]excelize.ConditionalFormatOptions{
 			{
 				Type:     "formula",
-				Criteria: `=AND(J2<>"",ISERROR(MATCH(J2,{"active","inactive"},0)))`,
+				Criteria: `=AND(J3<>"",ISERROR(MATCH(J3,{"active","inactive"},0)))`,
 				Format:   &invalidStyle,
 			},
 		},
@@ -861,7 +861,7 @@ func addGuideSheet(f *excelize.File) error {
 	rows := [][]interface{}{
 		{"Column", "Cara Pengisian", "Contoh"},
 		{"Name *", "Wajib diisi.", "Ahmad Fauzi"},
-		{"Email *", "Wajib diisi dan harus berupa email valid.", "ahmad@gmail.com"},
+		{"Email * (Selain Pelajar)", "Wajib untuk role selain Pelajar. Untuk Pelajar boleh dikosongkan.", "ahmad@gmail.com"},
 		{"Password * (Non-Student)", "Wajib untuk role selain Student. Untuk Student boleh dikosongkan.", "Password123"},
 		{"Role Name *", "Wajib diisi. Pilih Admin, Instruktur, atau Pelajar.", "Admin"},
 		{"Institution Code", "Isi kode institusi. Kode dapat dilihat pada Dashboard.", "INST001"},

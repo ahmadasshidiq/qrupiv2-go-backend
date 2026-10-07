@@ -143,8 +143,6 @@ func (s *ImportService) process(path string, job UserImportJob) {
 		s.fail(job, err)
 		return
 	}
-	// Template baru memiliki petunjuk di baris kedua. Tetap dukung template lama
-	// yang langsung menaruh data setelah header.
 	startRow := 1
 	if len(rows) > 1 && strings.Contains(strings.ToLower(strings.Join(rows[1], " ")), "wajib") {
 		startRow = 2
@@ -189,8 +187,8 @@ func (s *ImportService) importRow(r []string, scopedInstitution string) error {
 	}
 	name, email, roleName, password := get(0), get(1), get(2), get(3)
 	institutionCode, phone, pin, contextType, contextCode, isActive, barcodeInput := get(4), get(5), get(6), get(7), get(8), strings.ToLower(get(9)), get(10)
-	if name == "" || email == "" || roleName == "" || isActive == "" {
-		return errors.New("name,email,role_name,status wajib diisi")
+	if name == "" || roleName == "" || isActive == "" {
+		return errors.New("name,role_name,status wajib diisi")
 	}
 	if isActive != "active" && isActive != "inactive" {
 		return errors.New("status harus active atau inactive")
@@ -200,6 +198,12 @@ func (s *ImportService) importRow(r []string, scopedInstitution string) error {
 		return err
 	}
 	userType := userTypeFromRole(roleName)
+	if userType != "student" && email == "" {
+		return errors.New("email wajib diisi untuk role selain pelajar")
+	}
+	if userType == "student" && email == "" {
+		email = "student-" + uuid.NewString() + "@internal.qrupi"
+	}
 	if userType != "student" && password == "" {
 		return errors.New("password wajib diisi untuk role selain student")
 	}
