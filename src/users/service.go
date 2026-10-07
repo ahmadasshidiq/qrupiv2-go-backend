@@ -566,7 +566,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 	headerComments := map[string]string{
 		"A1": "Wajib diisi. Isi nama lengkap user. Contoh: Ahmad Fauzi",
 		"B1": "Wajib diisi. Isi email aktif dengan format valid. Contoh: ahmad@gmail.com",
-		"C1": "Wajib diisi. Pilih salah satu: Admin, Instructor, Student",
+		"C1": "Wajib diisi. Pilih salah satu: Admin, Instruktur, Pelajar",
 		"D1": "Wajib untuk role selain Student. Untuk Student boleh dikosongkan. Contoh: Password123",
 		"E1": "Isi kode institusi. Kode dapat dilihat pada Dashboard.",
 		"F1": "Isi nomor telepon user.",
@@ -634,7 +634,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 	guideRow := []string{
 		"Wajib diisi",
 		"Wajib, format email valid",
-		"Wajib: Admin/Instructor/Student",
+		"Wajib: Admin/Instruktur/Pelajar",
 		"Wajib selain Student; Student boleh kosong",
 		"Opsional jika sudah ada institution scope",
 		"Opsional",
@@ -691,9 +691,9 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		f,
 		sheet,
 		fmt.Sprintf("C%d:C%d", inputRangeStart, inputRangeEnd),
-		[]string{"Admin", "Instructor", "Student"},
+		[]string{"Admin", "Instruktur", "Pelajar"},
 		"Role Name",
-		"Pilih salah satu: Admin, Instructor, Student",
+		"Pilih salah satu: Admin, Instruktur, Pelajar",
 	); err != nil {
 		return nil, err
 	}
@@ -755,7 +755,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		[]excelize.ConditionalFormatOptions{
 			{
 				Type:     "formula",
-				Criteria: `=AND(C3<>"",ISERROR(MATCH(C3,{"Admin","Instructor","Student"},0)))`,
+				Criteria: `=AND(C3<>"",ISERROR(MATCH(C3,{"Admin","Instruktur","Pelajar"},0)))`,
 				Format:   &invalidStyle,
 			},
 		},
@@ -863,7 +863,7 @@ func addGuideSheet(f *excelize.File) error {
 		{"Name *", "Wajib diisi.", "Ahmad Fauzi"},
 		{"Email *", "Wajib diisi dan harus berupa email valid.", "ahmad@gmail.com"},
 		{"Password * (Non-Student)", "Wajib untuk role selain Student. Untuk Student boleh dikosongkan.", "Password123"},
-		{"Role Name *", "Wajib diisi. Pilih Admin, Instructor, atau Student.", "Admin"},
+		{"Role Name *", "Wajib diisi. Pilih Admin, Instruktur, atau Pelajar.", "Admin"},
 		{"Institution Code", "Isi kode institusi. Kode dapat dilihat pada Dashboard.", "INST001"},
 		{"Phone", "Isi nomor telepon user.", "081234567890"},
 		{"PIN (Student) *", "Wajib untuk Student, berupa 4 sampai 8 digit angka. Tidak diperlukan untuk role lain.", "123456"},

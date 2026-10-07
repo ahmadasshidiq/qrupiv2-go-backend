@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"clasenna-go-backend/libs/cryptography"
+	"clasenna-go-backend/libs/helpers"
 	"clasenna-go-backend/libs/models"
 	notif "clasenna-go-backend/libs/notifications"
 
@@ -194,9 +195,9 @@ func (s *ImportService) importRow(r []string, scopedInstitution string) error {
 	if isActive != "active" && isActive != "inactive" {
 		return errors.New("status harus active atau inactive")
 	}
-	var role models.Role
-	if err := s.DB.Where("LOWER(name)=LOWER(?)", roleName).First(&role).Error; err != nil {
-		return fmt.Errorf("role '%s' tidak ditemukan", roleName)
+	role, err := s.resolveRole(roleName)
+	if err != nil {
+		return err
 	}
 	userType := userTypeFromRole(roleName)
 	if userType != "student" && password == "" {
@@ -252,6 +253,42 @@ func (s *ImportService) importRow(r []string, scopedInstitution string) error {
 		}
 	}
 	return s.DB.Create(&models.User{Name: name, Email: email, RoleID: role.ID, InstitutionID: inst, Type: userType, Phone: phone, ContextType: contextType, ContextCode: contextCode, Status: models.UserStatus(isActive), Password: p2, LayerOne: string(l1s), LayerTwo: l2, Salt: salt, PinHash: pinHash, Barcode: barcode}).Error
+}
+
+func (s *ImportService) resolveRole(input string) (models.Role, error) {
+	canonical := strings.ToLower(strings.TrimSpace(input))
+	switch canonical {
+	case "admin", "institution admin", "admin institusi":
+		canonical = "institution_admin"
+	case "instructor", "instruktur", "guru", "teacher", "pengajar":
+		canonical = "instructor"
+	case "student", "pelajar", "siswa":
+		canonical = "student"
+	case "super admin", "superadmin":
+		canonical = "super_admin"
+	case "dinas pendidikan":
+		canonical = "dinas_pendidikan"
+	default:
+		canonical = strings.ReplaceAll(canonical, " ", "_")
+	}
+
+	if roleID := os.Getenv("ROLE_" + strings.ToUpper(canonical) + "_ID"); roleID != "" {
+		var role models.Role
+		if err := s.DB.Where("id = ?", roleID).First(&role).Error; err == nil {
+			return role, nil
+		}
+	}
+
+	var roles []models.Role
+	if err := s.DB.Find(&roles).Error; err != nil {
+		return models.Role{}, err
+	}
+	for _, role := range roles {
+		if helpers.IsRole(role.Name, canonical) {
+			return role, nil
+		}
+	}
+	return models.Role{}, fmt.Errorf("role '%s' tidak ditemukan", input)
 }
 func userTypeFromRole(n string) string {
 	switch strings.ToLower(strings.TrimSpace(n)) {
