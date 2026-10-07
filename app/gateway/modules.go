@@ -17,7 +17,7 @@ import (
 )
 
 func RegisterAllModules(router *gin.Engine, logger *slog.Logger) {
-	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	router.GET("/docs/*any", httpserver.SwaggerSecurityHeaders(), ginSwagger.WrapHandler(swaggerFiles.Handler))
 	router.Any("/api/v1/*path", func(c *gin.Context) {
 		path := c.Param("path")
 		target := helpers.ConfigString("CORE_SERVICE_URL", "http://localhost:3002")
@@ -37,6 +37,8 @@ func RegisterAllModules(router *gin.Engine, logger *slog.Logger) {
 		case strings.HasPrefix(path, "/reports/"):
 			target = helpers.ConfigString("REPORTING_SERVICE_URL", "http://localhost:3005")
 		case strings.HasPrefix(path, "/export/"):
+			target = helpers.ConfigString("REPORTING_SERVICE_URL", "http://localhost:3005")
+		case path == "/users/import-excel" || strings.HasPrefix(path, "/users/import-excel/"):
 			target = helpers.ConfigString("REPORTING_SERVICE_URL", "http://localhost:3005")
 		}
 		if !isPublicRoute(c.Request.Method, path) && !authorize(c) {

@@ -32,7 +32,7 @@ func main() {
 			return
 		}
 	}
-	if err := db.AutoMigrate(&StudentReadModel{}, &kafkalib.ProcessedEvent{}); err != nil {
+	if err := db.AutoMigrate(&StudentReadModel{}, &UserImportJob{}, &kafkalib.ProcessedEvent{}); err != nil {
 		logger.Error("migration failed", "error", err)
 		return
 	}

@@ -232,6 +232,8 @@ definitions:
         type: number
       location_long:
         type: number
+      occurred_at:
+        type: string
       requires_check_out:
         type: boolean
       status:
@@ -248,6 +250,7 @@ definitions:
       user_id:
         type: string
     required:
+    - occurred_at
     - status
     - type
     - user_id
@@ -281,6 +284,8 @@ definitions:
         type: number
       learning_group_id:
         type: string
+      occurred_at:
+        type: string
       requires_check_out:
         type: boolean
       status:
@@ -298,6 +303,7 @@ definitions:
       user_id:
         type: string
     required:
+    - occurred_at
     - status
     - type
     - user_id
@@ -321,6 +327,8 @@ definitions:
       check_out_long:
         type: number
       learning_group_id:
+        type: string
+      occurred_at:
         type: string
       requires_check_out:
         type: boolean
@@ -408,6 +416,13 @@ definitions:
     required:
     - pin
     - qr_code
+    type: object
+  auth.SwitchStudentDTO:
+    properties:
+      user_id:
+        type: string
+    required:
+    - user_id
     type: object
   clasenna-go-backend_libs_helpers.SuccessResponse:
     properties:
@@ -601,12 +616,9 @@ definitions:
         type: string
       start_time:
         type: string
-      user_id:
-        type: string
     required:
     - quiz_id
     - start_time
-    - user_id
     type: object
   quiz_sessions.UpdateDTO:
     properties:
@@ -1472,6 +1484,19 @@ paths:
           $ref: '#/definitions/auth.StudentScanLoginDTO'
       responses: {}
       summary: Login student using barcode and PIN
+      tags:
+      - Auth API
+  /auth/student/switch:
+    post:
+      parameters:
+      - description: Student user ID
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/auth.SwitchStudentDTO'
+      responses: {}
+      summary: Switch the active session to a student
       tags:
       - Auth API
   /auth/student/verify-pin:

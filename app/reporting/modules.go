@@ -23,6 +23,7 @@ type StudentReadModel struct {
 
 func RegisterAllModules(router *gin.RouterGroup, db *gorm.DB) {
 	export.RegisterExportModule(router, db)
+	RegisterImportAPI(router, db)
 	reports := router.Group("/reports")
 	reports.GET("/students", func(c *gin.Context) {
 		var rows []StudentReadModel

@@ -1104,6 +1104,26 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/auth/student/switch": {
+            "post": {
+                "tags": [
+                    "Auth API"
+                ],
+                "summary": "Switch the active session to a student",
+                "parameters": [
+                    {
+                        "description": "Student user ID",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.SwitchStudentDTO"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/auth/student/verify-pin": {
             "post": {
                 "tags": [
@@ -3672,6 +3692,7 @@ const docTemplate = `{
         "attendance_logs.CheckInDTO": {
             "type": "object",
             "required": [
+                "occurred_at",
                 "status",
                 "type",
                 "user_id"
@@ -3688,6 +3709,9 @@ const docTemplate = `{
                 },
                 "location_long": {
                     "type": "number"
+                },
+                "occurred_at": {
+                    "type": "string"
                 },
                 "requires_check_out": {
                     "type": "boolean"
@@ -3729,6 +3753,7 @@ const docTemplate = `{
         "attendance_logs.CreateDTO": {
             "type": "object",
             "required": [
+                "occurred_at",
                 "status",
                 "type",
                 "user_id"
@@ -3759,6 +3784,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "learning_group_id": {
+                    "type": "string"
+                },
+                "occurred_at": {
                     "type": "string"
                 },
                 "requires_check_out": {
@@ -3813,6 +3841,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "learning_group_id": {
+                    "type": "string"
+                },
+                "occurred_at": {
                     "type": "string"
                 },
                 "requires_check_out": {
@@ -3935,6 +3966,17 @@ const docTemplate = `{
                 "qr_code": {
                     "type": "string",
                     "maxLength": 1000
+                }
+            }
+        },
+        "auth.SwitchStudentDTO": {
+            "type": "object",
+            "required": [
+                "user_id"
+            ],
+            "properties": {
+                "user_id": {
+                    "type": "string"
                 }
             }
         },
@@ -4206,8 +4248,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "quiz_id",
-                "start_time",
-                "user_id"
+                "start_time"
             ],
             "properties": {
                 "device_info": {
@@ -4217,9 +4258,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "start_time": {
-                    "type": "string"
-                },
-                "user_id": {
                     "type": "string"
                 }
             }

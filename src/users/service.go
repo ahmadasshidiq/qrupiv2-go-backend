@@ -550,29 +550,31 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 	f.SetSheetName("Sheet1", sheet)
 
 	headers := []string{
-		"Name",
-		"Email",
-		"Password",
-		"Role Name",
+		"Name *",
+		"Email *",
+		"Role Name *",
+		"Password * (Non-Student)",
 		"Institution Code",
 		"Phone",
-		"PIN (Student)",
+		"PIN (Student) *",
 		"Context Type",
 		"Context Code",
-		"Status",
+		"Status *",
+		"Barcode (Student)",
 	}
 
 	headerComments := map[string]string{
-		"A1": "Isi nama lengkap user. Contoh: Ahmad Fauzi",
-		"B1": "Isi email aktif dengan format valid. Contoh: ahmad@gmail.com",
-		"C1": "Isi password awal user. Contoh: Password123",
-		"D1": "Pilih salah satu: Admin, Instructor, Student",
+		"A1": "Wajib diisi. Isi nama lengkap user. Contoh: Ahmad Fauzi",
+		"B1": "Wajib diisi. Isi email aktif dengan format valid. Contoh: ahmad@gmail.com",
+		"C1": "Wajib diisi. Pilih salah satu: Admin, Instructor, Student",
+		"D1": "Wajib untuk role selain Student. Untuk Student boleh dikosongkan. Contoh: Password123",
 		"E1": "Isi kode institusi. Kode dapat dilihat pada Dashboard.",
 		"F1": "Isi nomor telepon user.",
-		"G1": "Wajib untuk siswa. Isi PIN numerik 4 sampai 8 digit.",
-		"H1": "Isi jenis identitas/konteks sesuai kebutuhan di lapangan. Contoh: NIP, NIK, NIM, Employee ID, Member ID, Vendor Code, atau kode lain yang digunakan institusi.",
-		"I1": "Isi kode sesuai Context Type. Contoh: jika Context Type NIP, isi nomor NIP. Contoh: 0477093",
-		"J1": "Pilih salah satu: Active atau Inactive",
+		"G1": "Wajib untuk Student. Isi PIN tepat 6 digit angka.",
+		"H1": "Opsional. Isi jenis konteks sesuai kebutuhan aplikasi.",
+		"I1": "Opsional. Isi kode konteks yang terkait.",
+		"J1": "Wajib diisi. Pilih salah satu: Active atau Inactive",
+		"K1": "Opsional untuk student. Jika kosong, barcode akan dibuat otomatis. Barcode harus unik.",
 	}
 
 	headerStyle, err := f.NewStyle(&excelize.Style{
@@ -582,7 +584,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		},
 		Fill: excelize.Fill{
 			Type:    "pattern",
-			Color:   []string{"3733ab"},
+			Color:   []string{"2563EB"},
 			Pattern: 1,
 		},
 		Alignment: &excelize.Alignment{
@@ -628,6 +630,40 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		}
 	}
 
+	// Baris kedua berisi petunjuk singkat; data dimulai dari baris ketiga.
+	guideRow := []string{
+		"Wajib diisi",
+		"Wajib, format email valid",
+		"Wajib: Admin/Instructor/Student",
+		"Wajib selain Student; Student boleh kosong",
+		"Opsional jika sudah ada institution scope",
+		"Opsional",
+		"Wajib Student, tepat 6 digit",
+		"Opsional",
+		"Opsional",
+		"Wajib: active/inactive",
+		"Opsional Student; unik, kosong = otomatis",
+	}
+	guideStyle, err := f.NewStyle(&excelize.Style{Font: &excelize.Font{Italic: true, Color: "666666"}, Fill: excelize.Fill{Type: "pattern", Color: []string{"EDEDED"}, Pattern: 1}, Alignment: &excelize.Alignment{WrapText: true, Vertical: "center"}})
+	if err != nil {
+		return nil, err
+	}
+	for i, text := range guideRow {
+		cell, err := excelize.CoordinatesToCellName(i+1, 2)
+		if err != nil {
+			return nil, err
+		}
+		if err := f.SetCellValue(sheet, cell, text); err != nil {
+			return nil, err
+		}
+		if err := f.SetCellStyle(sheet, cell, cell, guideStyle); err != nil {
+			return nil, err
+		}
+	}
+	if err := f.SetRowHeight(sheet, 2, 36); err != nil {
+		return nil, err
+	}
+
 	colWidths := map[string]float64{
 		"A": 24,
 		"B": 28,
@@ -639,6 +675,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		"H": 20,
 		"I": 18,
 		"J": 18,
+		"K": 26,
 	}
 
 	for col, width := range colWidths {
@@ -647,13 +684,13 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		}
 	}
 
-	inputRangeStart := 2
+	inputRangeStart := 3
 	inputRangeEnd := 1000
 
 	if err := addDropdownValidation(
 		f,
 		sheet,
-		fmt.Sprintf("D%d:D%d", inputRangeStart, inputRangeEnd),
+		fmt.Sprintf("C%d:C%d", inputRangeStart, inputRangeEnd),
 		[]string{"Admin", "Instructor", "Student"},
 		"Role Name",
 		"Pilih salah satu: Admin, Instructor, Student",
@@ -714,11 +751,11 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 
 	if err := f.SetConditionalFormat(
 		sheet,
-		fmt.Sprintf("D%d:D%d", inputRangeStart, inputRangeEnd),
+		fmt.Sprintf("C%d:C%d", inputRangeStart, inputRangeEnd),
 		[]excelize.ConditionalFormatOptions{
 			{
 				Type:     "formula",
-				Criteria: `=AND(D2<>"",ISERROR(MATCH(D2,{"Admin","Instructor","Student"},0)))`,
+				Criteria: `=AND(C3<>"",ISERROR(MATCH(C3,{"Admin","Instructor","Student"},0)))`,
 				Format:   &invalidStyle,
 			},
 		},
@@ -745,7 +782,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		fmt.Sprintf("G%d:G%d", inputRangeStart, inputRangeEnd),
 		[]excelize.ConditionalFormatOptions{{
 			Type:     "formula",
-			Criteria: `=AND(D2="Student",OR(LEN(G2)<4,LEN(G2)>8,NOT(ISNUMBER(--G2))))`,
+			Criteria: `=AND(C3="Student",OR(LEN(G3)<>6,NOT(ISNUMBER(--G3))))`,
 			Format:   &invalidStyle,
 		}},
 	); err != nil {
@@ -766,22 +803,18 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		return nil, err
 	}
 
-	if err := addGuideSheet(f); err != nil {
-		return nil, err
-	}
-
 	if err := f.SetPanes(sheet, &excelize.Panes{
 		Freeze:      true,
 		Split:       false,
 		XSplit:      0,
-		YSplit:      1,
-		TopLeftCell: "A2",
+		YSplit:      2,
+		TopLeftCell: "A3",
 		ActivePane:  "bottomLeft",
 	}); err != nil {
 		return nil, err
 	}
 
-	if err := f.AutoFilter(sheet, "A1:J1", nil); err != nil {
+	if err := f.AutoFilter(sheet, "A1:K1", nil); err != nil {
 		return nil, err
 	}
 
@@ -827,16 +860,17 @@ func addGuideSheet(f *excelize.File) error {
 
 	rows := [][]interface{}{
 		{"Column", "Cara Pengisian", "Contoh"},
-		{"Name", "Isi nama lengkap user.", "Ahmad Fauzi"},
-		{"Email", "Isi email aktif dengan format email yang valid.", "ahmad@gmail.com"},
-		{"Password", "Isi password awal user.", "Password123"},
-		{"Role Name", "Pilih salah satu: Admin, Instructor, Student.", "Admin"},
+		{"Name *", "Wajib diisi.", "Ahmad Fauzi"},
+		{"Email *", "Wajib diisi dan harus berupa email valid.", "ahmad@gmail.com"},
+		{"Password * (Non-Student)", "Wajib untuk role selain Student. Untuk Student boleh dikosongkan.", "Password123"},
+		{"Role Name *", "Wajib diisi. Pilih Admin, Instructor, atau Student.", "Admin"},
 		{"Institution Code", "Isi kode institusi. Kode dapat dilihat pada Dashboard.", "INST001"},
 		{"Phone", "Isi nomor telepon user.", "081234567890"},
-		{"PIN (Student)", "Wajib untuk siswa, berupa 4 sampai 8 digit angka.", "123456"},
+		{"PIN (Student) *", "Wajib untuk Student, berupa 4 sampai 8 digit angka. Tidak diperlukan untuk role lain.", "123456"},
 		{"Context Type", "Pilih salah satu: NIP, NIK, NIM.", "NIP"},
 		{"Context Code", "Isi kode yang berhubungan dengan Context Type.", "0477093"},
-		{"Status", "Pilih salah satu: Active atau Inactive.", "Active"},
+		{"Status *", "Wajib diisi. Pilih Active atau Inactive.", "Active"},
+		{"Barcode (Student)", "Opsional untuk Student. Jika kosong, barcode dibuat otomatis dan harus unik.", "STD-00001"},
 	}
 
 	for i, row := range rows {

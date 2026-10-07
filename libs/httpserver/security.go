@@ -67,3 +67,12 @@ func SecurityHeaders() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// SwaggerSecurityHeaders allows the inline bootstrap code and styles used by
+// the bundled Swagger UI. Keep this exception limited to the documentation UI.
+func SwaggerSecurityHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'self'; object-src 'none'; base-uri 'self';")
+		c.Next()
+	}
+}

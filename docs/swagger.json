@@ -1100,6 +1100,26 @@
                 "responses": {}
             }
         },
+        "/auth/student/switch": {
+            "post": {
+                "tags": [
+                    "Auth API"
+                ],
+                "summary": "Switch the active session to a student",
+                "parameters": [
+                    {
+                        "description": "Student user ID",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.SwitchStudentDTO"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/auth/student/verify-pin": {
             "post": {
                 "tags": [
@@ -3668,6 +3688,7 @@
         "attendance_logs.CheckInDTO": {
             "type": "object",
             "required": [
+                "occurred_at",
                 "status",
                 "type",
                 "user_id"
@@ -3684,6 +3705,9 @@
                 },
                 "location_long": {
                     "type": "number"
+                },
+                "occurred_at": {
+                    "type": "string"
                 },
                 "requires_check_out": {
                     "type": "boolean"
@@ -3725,6 +3749,7 @@
         "attendance_logs.CreateDTO": {
             "type": "object",
             "required": [
+                "occurred_at",
                 "status",
                 "type",
                 "user_id"
@@ -3755,6 +3780,9 @@
                     "type": "number"
                 },
                 "learning_group_id": {
+                    "type": "string"
+                },
+                "occurred_at": {
                     "type": "string"
                 },
                 "requires_check_out": {
@@ -3809,6 +3837,9 @@
                     "type": "number"
                 },
                 "learning_group_id": {
+                    "type": "string"
+                },
+                "occurred_at": {
                     "type": "string"
                 },
                 "requires_check_out": {
@@ -3931,6 +3962,17 @@
                 "qr_code": {
                     "type": "string",
                     "maxLength": 1000
+                }
+            }
+        },
+        "auth.SwitchStudentDTO": {
+            "type": "object",
+            "required": [
+                "user_id"
+            ],
+            "properties": {
+                "user_id": {
+                    "type": "string"
                 }
             }
         },
@@ -4202,8 +4244,7 @@
             "type": "object",
             "required": [
                 "quiz_id",
-                "start_time",
-                "user_id"
+                "start_time"
             ],
             "properties": {
                 "device_info": {
@@ -4213,9 +4254,6 @@
                     "type": "string"
                 },
                 "start_time": {
-                    "type": "string"
-                },
-                "user_id": {
                     "type": "string"
                 }
             }
