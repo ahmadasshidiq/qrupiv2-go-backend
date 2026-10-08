@@ -50,18 +50,18 @@ func main() {
 	}
 	consumer := kafkalib.NewConsumer(kafkalib.ConsumerConfig{Brokers: brokers, Topic: eventsTopic, GroupID: "notification-service", DLQTopic: dlqTopic, MaxRetries: helpers.ConfigInt("KAFKA_MAX_RETRIES", 3), RetryDelay: helpers.ConfigDuration("KAFKA_RETRY_DELAY", time.Second)}, store, logger)
 	defer consumer.Close()
-	go func() {
-		if err := consumer.Run(ctx, HandleEvent(db, fcm, logger)); err != nil {
-			logger.Error("consumer stopped", "error", err)
-			stop()
-		}
-	}()
 	r := gin.New()
 	r.Use(gin.Recovery())
 	metrics := &httpserver.Metrics{}
 	r.Use(httpserver.Middleware(logger, metrics))
 	httpserver.RegisterProbes(r, metrics, nil)
-	RegisterAllModules(r.Group("/api/v1"), db, fcm, logger)
+	service := RegisterAllModules(r.Group("/api/v1"), db, fcm, logger)
+	go func() {
+		if err := consumer.Run(ctx, service.HandleEvent); err != nil {
+			logger.Error("consumer stopped", "error", err)
+			stop()
+		}
+	}()
 	if err := httpserver.Run(ctx, ":"+helpers.ConfigString("NOTIFICATION_PORT", "3004"), r, logger); err != nil {
 		logger.Error("server stopped", "error", err)
 	}

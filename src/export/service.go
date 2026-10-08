@@ -118,7 +118,7 @@ func (s *ExportService) buildQuery(dto ExportDTO, filters []FilterDTO) (string, 
 
 	conditions := []string{}
 	args := []interface{}{}
-	allowedOperators := map[string]bool{"=": true, "!=": true, "like": true, "in": true}
+	allowedOperators := map[string]bool{"=": true, "!=": true, "like": true, "in": true, ">=": true, "<=": true}
 	allowedKeys := map[string]bool{"id": true, "institution_id": true, "user_id": true, "role_id": true, "learning_group_id": true, "activity_item_id": true, "recorded_user_id": true, "quiz_id": true, "name": true, "code": true, "email": true, "type": true, "phone": true, "context_type": true, "context_code": true, "status": true, "barcode": true, "avatar_url": true, "level": true, "major": true, "department": true, "academic_year": true, "title": true, "description": true, "point_value": true, "platform": true, "occurred_at": true, "created_at": true, "updated_at": true, "deleted_at": true}
 	for _, filter := range filters {
 		if !allowedKeys[filter.Key] {

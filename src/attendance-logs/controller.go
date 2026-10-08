@@ -155,7 +155,7 @@ func (c *AttendanceLogController) Update(ctx *gin.Context) {
 	}
 	data, err := c.Service.update(ctx, ctx.Param("id"), dto)
 	if err != nil {
-		helpers.RespondError(ctx, "attendance-logs", http.StatusInternalServerError, err)
+		helpers.RespondError(ctx, "attendance-logs", http.StatusBadRequest, err)
 		return
 	}
 	if data == nil {

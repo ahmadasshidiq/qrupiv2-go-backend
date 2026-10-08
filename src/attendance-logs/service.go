@@ -243,6 +243,12 @@ func (s *AttendanceLogService) update(ctx *gin.Context, id string, dto UpdateDTO
 	data.UserID, data.LearningGroupID, data.Type = userID, learningGroupID, attendanceType
 	if dto.Status != nil {
 		data.Status = models.AttendanceStatus(*dto.Status)
+		// Absence details are only valid for absent attendance. Clear stale
+		// values when changing an existing absent record to late/on_time.
+		if data.Status != models.AttendanceStatusAbsent {
+			data.AbsenceReasonID = nil
+			data.AbsenceNote = ""
+		}
 	}
 	if dto.AbsenceReasonID != nil {
 		absenceReasonID, err := s.parseAbsenceReason(ctx, *dto.AbsenceReasonID)
