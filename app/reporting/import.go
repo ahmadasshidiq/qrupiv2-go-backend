@@ -175,7 +175,7 @@ func (s *ImportService) notify(job UserImportJob, typ, msg string, data map[stri
 	if job.UploaderID == "" {
 		return
 	}
-	_ = s.Notifier.Publish(context.Background(), notif.Event{Type: notif.EventType(typ), Scope: notif.EventScopeUser, Title: "Import user", Message: msg, UserID: job.UploaderID, InstitutionID: job.InstitutionID, EntityID: job.ID.String(), Data: data, CreatedAt: time.Now().UTC()})
+	_ = s.Notifier.Publish(context.Background(), notif.Event{Type: notif.EventType(typ), Scope: notif.EventScopeUser, Title: "Import user", Message: msg, UserID: job.UploaderID, InstitutionID: job.InstitutionID, EntityID: job.ID.String(), WebURL: "/users/import-excel/" + job.ID.String(), MobileRoute: "/users/import-excel/" + job.ID.String(), Data: data, CreatedAt: time.Now().UTC()})
 }
 
 func (s *ImportService) importRow(r []string, scopedInstitution string) error {

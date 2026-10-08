@@ -224,7 +224,7 @@ func (s *QuizService) create(dto CreateDTO) (*models.Quiz, error) {
 		var recipients []string
 		s.DB.Table("learning_group_members").Where("learning_group_id = ? AND role_in_group = ? AND deleted_at IS NULL", data.LearningGroupID, models.RoleInGroupStudent).Pluck("user_id", &recipients)
 		go func() {
-			_ = s.Notifier.Publish(context.Background(), notif.Event{Type: notif.EventTypeQuizCreated, Scope: notif.EventScopeUser, Title: "Quiz baru tersedia", Message: "Quiz baru tersedia di learning group kamu.", InstitutionID: data.InstitutionID.String(), RecipientIDs: recipients, EntityID: data.ID.String(), Data: map[string]interface{}{"title": data.Title}, CreatedAt: time.Now()})
+			_ = s.Notifier.Publish(context.Background(), notif.Event{Type: notif.EventTypeQuizCreated, Scope: notif.EventScopeUser, Title: "Quiz baru tersedia", Message: "Quiz baru tersedia di learning group kamu.", InstitutionID: data.InstitutionID.String(), RecipientIDs: recipients, EntityID: data.ID.String(), WebURL: "/quizzes/" + data.ID.String(), MobileRoute: "/quizzes/" + data.ID.String(), Data: map[string]interface{}{"title": data.Title}, CreatedAt: time.Now()})
 		}()
 	}
 

@@ -210,7 +210,7 @@ func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*mode
 			ids = append(ids, id.String())
 		}
 		go func() {
-			_ = s.Notifier.Publish(context.Background(), notif.Event{Type: notif.EventTypeResourceCreated, Scope: notif.EventScopeUser, Title: "Modul baru tersedia", Message: "Ada modul pembelajaran baru di learning group kamu.", UserID: uploadedUserID.String(), RecipientIDs: ids, EntityID: data.ID.String(), InstitutionID: institutionID, Data: map[string]interface{}{"title": data.Title}, CreatedAt: time.Now()})
+			_ = s.Notifier.Publish(context.Background(), notif.Event{Type: notif.EventTypeResourceCreated, Scope: notif.EventScopeUser, Title: "Modul baru tersedia", Message: "Ada modul pembelajaran baru di learning group kamu.", UserID: uploadedUserID.String(), RecipientIDs: ids, EntityID: data.ID.String(), InstitutionID: institutionID, WebURL: "/learning-resources/" + data.ID.String(), MobileRoute: "/learning-resources/" + data.ID.String(), Data: map[string]interface{}{"title": data.Title}, CreatedAt: time.Now()})
 		}()
 	}
 	return &data, nil

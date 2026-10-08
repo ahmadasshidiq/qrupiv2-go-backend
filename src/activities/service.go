@@ -311,6 +311,7 @@ func (s *ActivityService) create(dto CreateDTO) (*models.Activity, error) {
 				Title: "Aktivitas baru", Message: "Aktivitas baru telah dicatat untukmu.",
 				InstitutionID: uuidString(data.InstitutionID), UserID: data.UserID.String(),
 				RecipientIDs: []string{data.UserID.String()}, EntityID: data.ID.String(),
+				WebURL: "/activities/" + data.ID.String(), MobileRoute: "/activities/" + data.ID.String(),
 				Data: map[string]interface{}{"point_value": data.PointValue}, CreatedAt: time.Now(),
 			})
 		}()

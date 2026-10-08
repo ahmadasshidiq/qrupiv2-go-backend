@@ -152,7 +152,7 @@ func (s *AttendanceLogService) create(ctx *gin.Context, dto CreateDTO) (*models.
 	}
 	if s.Notifier != nil {
 		go func() {
-			_ = s.Notifier.Publish(context.Background(), notif.Event{Type: notif.EventTypeAttendanceCreated, Scope: notif.EventScopeUser, Title: "Kehadiran tercatat", Message: "Data kehadiran kamu berhasil dicatat.", InstitutionID: userInstitutionID(s.DB, data.UserID), UserID: data.UserID.String(), RecipientIDs: []string{data.UserID.String()}, EntityID: data.ID.String(), CreatedAt: time.Now()})
+			_ = s.Notifier.Publish(context.Background(), notif.Event{Type: notif.EventTypeAttendanceCreated, Scope: notif.EventScopeUser, Title: "Kehadiran tercatat", Message: "Data kehadiran kamu berhasil dicatat.", InstitutionID: userInstitutionID(s.DB, data.UserID), UserID: data.UserID.String(), RecipientIDs: []string{data.UserID.String()}, EntityID: data.ID.String(), WebURL: "/attendance-logs/" + data.ID.String(), MobileRoute: "/attendance-logs/" + data.ID.String(), CreatedAt: time.Now()})
 		}()
 	}
 	return &data, nil
