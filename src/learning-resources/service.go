@@ -151,7 +151,15 @@ func (s *LearningResourceService) getAll(ctx *gin.Context, dto DefaultFindDTO) (
 
 func (s *LearningResourceService) getByID(ctx *gin.Context, id string) (*models.LearningResource, error) {
 	var data models.LearningResource
-	err := s.DB.Preload("LearningGroups").Preload("UploadedUser").Preload("ResourceFiles").Where("learning_resources.id = ? AND (learning_resources.uploaded_user_id = ? OR EXISTS (SELECT 1 FROM learning_resource_groups x JOIN learning_group_members m ON m.learning_group_id = x.learning_group_id WHERE x.learning_resource_id = learning_resources.id AND m.user_id = ? AND m.deleted_at IS NULL))", id, ctx.GetString("user_id"), ctx.GetString("user_id")).First(&data).Error
+	query := s.DB.Preload("LearningGroups").Preload("UploadedUser").Preload("ResourceFiles").Where("learning_resources.id = ?", id)
+	var role string
+	if err := s.DB.Table("roles").Select("name").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
+		return nil, err
+	}
+	if !helpers.IsRole(role, "super_admin") {
+		query = query.Where("learning_resources.uploaded_user_id = ? OR EXISTS (SELECT 1 FROM learning_resource_groups x JOIN learning_group_members m ON m.learning_group_id = x.learning_group_id WHERE x.learning_resource_id = learning_resources.id AND m.user_id = ? AND m.deleted_at IS NULL)", ctx.GetString("user_id"), ctx.GetString("user_id"))
+	}
+	err := query.First(&data).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
