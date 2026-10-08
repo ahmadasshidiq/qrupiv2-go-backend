@@ -36,6 +36,29 @@ func (c *AttendanceLogController) GetAll(ctx *gin.Context) {
 	helpers.RespondSuccess(ctx, "attendance-logs", http.StatusOK, data)
 }
 
+// @Summary Get Attendance Log Chart
+// @Tags Attendance Log API
+// @Param type query string true "Attendance type" Enums(student, teacher)
+// @Param start_date query string true "Start date" Format(date)
+// @Param end_date query string true "End date" Format(date)
+// @Param learning_group_id query string false "Learning group ID"
+// @Param user_id query string false "User ID"
+// @Security BearerAuth
+// @Router /attendance-logs/chart [get]
+func (c *AttendanceLogController) Chart(ctx *gin.Context) {
+	var dto ChartDTO
+	if err := ctx.ShouldBindQuery(&dto); err != nil {
+		helpers.RespondError(ctx, "attendance-logs", http.StatusBadRequest, err)
+		return
+	}
+	data, err := c.Service.chart(ctx, dto)
+	if err != nil {
+		helpers.RespondError(ctx, "attendance-logs", http.StatusBadRequest, err)
+		return
+	}
+	helpers.RespondSuccess(ctx, "attendance-logs", http.StatusOK, data)
+}
+
 // @Summary Get Attendance Log by ID
 // @Tags Attendance Log API
 // @Param id path string true "Attendance Log ID"

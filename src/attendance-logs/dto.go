@@ -11,6 +11,14 @@ type DefaultFindDTO struct {
 	Page      int    `form:"page" binding:"omitempty,min=1"`
 }
 
+type ChartDTO struct {
+	Type            string `form:"type" binding:"required,oneof=student teacher"`
+	StartDate       string `form:"start_date" binding:"required,datetime=2006-01-02"`
+	EndDate         string `form:"end_date" binding:"required,datetime=2006-01-02"`
+	LearningGroupID string `form:"learning_group_id" binding:"omitempty,uuid"`
+	UserID          string `form:"user_id" binding:"omitempty,uuid"`
+}
+
 type CreateDTO struct {
 	UserID           string     `json:"user_id" binding:"required,uuid"`
 	LearningGroupID  string     `json:"learning_group_id" binding:"omitempty,uuid"`

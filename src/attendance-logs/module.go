@@ -14,6 +14,7 @@ func RegisterAttendanceLogModule(router *gin.RouterGroup, db *gorm.DB) {
 	group := router.Group("/attendance-logs")
 	group.Use(cryptography.JWTMiddleware(db))
 	{
+		group.GET("/chart", permissions.Handler("attendance-logs", "get-all"), controller.Chart)
 		group.GET("", permissions.Handler("attendance-logs", "get-all"), controller.GetAll)
 		group.GET("/:id", permissions.Handler("attendance-logs", "get-by-id"), controller.GetByID)
 		group.POST("/check-in", permissions.Handler("attendance-logs", "create"), controller.CheckIn)
