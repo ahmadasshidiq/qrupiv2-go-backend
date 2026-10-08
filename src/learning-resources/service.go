@@ -226,7 +226,15 @@ func (s *LearningResourceService) create(ctx *gin.Context, dto CreateDTO) (*mode
 
 func (s *LearningResourceService) update(ctx *gin.Context, id string, dto UpdateDTO) (*models.LearningResource, error) {
 	var data models.LearningResource
-	if err := s.DB.Preload("ResourceFiles").Where("id = ? AND uploaded_user_id = ?", id, ctx.GetString("user_id")).First(&data).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	query := s.DB.Preload("ResourceFiles").Where("id = ?", id)
+	var role string
+	if err := s.DB.Table("roles").Select("name").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
+		return nil, err
+	}
+	if !helpers.IsRole(role, "super_admin") {
+		query = query.Where("uploaded_user_id = ?", ctx.GetString("user_id"))
+	}
+	if err := query.First(&data).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	} else if err != nil {
 		return nil, err
