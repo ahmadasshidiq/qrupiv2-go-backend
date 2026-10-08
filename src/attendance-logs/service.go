@@ -284,6 +284,17 @@ func (s *AttendanceLogService) update(ctx *gin.Context, id string, dto UpdateDTO
 	if dto.CheckOutLong != nil {
 		data.CheckOutLong = dto.CheckOutLong
 	}
+	// An absent attendance cannot contain check-in/out data. Clear stale
+	// check-in values when changing an existing late/on-time record to absent.
+	if data.Status == models.AttendanceStatusAbsent {
+		data.RequiresCheckOut = false
+		data.CheckInAt = nil
+		data.CheckInLat = nil
+		data.CheckInLong = nil
+		data.CheckOutAt = nil
+		data.CheckOutLat = nil
+		data.CheckOutLong = nil
+	}
 	if data.CheckOutAt != nil && data.CheckInAt == nil {
 		return nil, errors.New("check_in_at is required when check_out_at is provided")
 	}
