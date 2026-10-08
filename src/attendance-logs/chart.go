@@ -12,7 +12,6 @@ import (
 type chartRecord struct {
 	Date, Status, UserID, UserName, GroupID, GroupName string
 	AbsenceReasonID, AbsenceReasonName                 string
-	LateMinutes                                        float64
 }
 
 type AttendanceChart struct {
@@ -25,12 +24,11 @@ type AttendanceChart struct {
 	AbsenceByReason    []ChartAbsenceReason `json:"absence_by_reason"`
 }
 type ChartSummary struct {
-	TotalRecords       int     `json:"total_records"`
-	OnTime             int     `json:"on_time"`
-	Late               int     `json:"late"`
-	Absent             int     `json:"absent"`
-	AttendanceRate     float64 `json:"attendance_rate"`
-	AverageLateMinutes float64 `json:"average_late_minutes"`
+	TotalRecords   int     `json:"total_records"`
+	OnTime         int     `json:"on_time"`
+	Late           int     `json:"late"`
+	Absent         int     `json:"absent"`
+	AttendanceRate float64 `json:"attendance_rate"`
 }
 type ChartDailyTrend struct {
 	Date   string `json:"date"`
@@ -81,7 +79,7 @@ func (s *AttendanceLogService) chart(ctx *gin.Context, dto ChartDTO) (*Attendanc
 	}
 
 	q := s.DB.WithContext(ctx.Request.Context()).Table("attendance_logs al").
-		Select("to_char(al.occurred_at::date, 'YYYY-MM-DD') as date, al.status, al.user_id, u.name as user_name, COALESCE(al.learning_group_id::text, '') as group_id, COALESCE(lg.name, '') as group_name, COALESCE(al.absence_reason_id::text, '') as absence_reason_id, COALESCE(ar.name, '') as absence_reason_name, CASE WHEN al.status = 'late' AND al.check_in_at IS NOT NULL THEN GREATEST(EXTRACT(EPOCH FROM (al.check_in_at - al.occurred_at)) / 60, 0) ELSE 0 END as late_minutes").
+		Select("to_char(al.occurred_at::date, 'YYYY-MM-DD') as date, al.status, al.user_id, u.name as user_name, COALESCE(al.learning_group_id::text, '') as group_id, COALESCE(lg.name, '') as group_name, COALESCE(al.absence_reason_id::text, '') as absence_reason_id, COALESCE(ar.name, '') as absence_reason_name").
 		Joins("JOIN users u ON u.id = al.user_id AND u.deleted_at IS NULL").
 		Joins("LEFT JOIN learning_groups lg ON lg.id = al.learning_group_id AND lg.deleted_at IS NULL").
 		Joins("LEFT JOIN attendance_absence_reasons ar ON ar.id = al.absence_reason_id AND ar.deleted_at IS NULL").
@@ -112,7 +110,6 @@ func (s *AttendanceLogService) chart(ctx *gin.Context, dto ChartDTO) (*Attendanc
 			result.Summary.OnTime++
 		case string(models.AttendanceStatusLate):
 			result.Summary.Late++
-			result.Summary.AverageLateMinutes += r.LateMinutes
 		case string(models.AttendanceStatusAbsent):
 			result.Summary.Absent++
 			if r.AbsenceReasonID != "" {
@@ -150,9 +147,6 @@ func (s *AttendanceLogService) chart(ctx *gin.Context, dto ChartDTO) (*Attendanc
 	}
 	if result.Summary.TotalRecords > 0 {
 		result.Summary.AttendanceRate = percentage(result.Summary.OnTime+result.Summary.Late, result.Summary.TotalRecords)
-	}
-	if result.Summary.Late > 0 {
-		result.Summary.AverageLateMinutes = round(result.Summary.AverageLateMinutes / float64(result.Summary.Late))
 	}
 	for _, d := range daily {
 		result.DailyTrend = append(result.DailyTrend, *d)
