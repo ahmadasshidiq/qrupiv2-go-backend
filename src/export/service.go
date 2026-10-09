@@ -152,6 +152,12 @@ func (s *ExportService) buildQuery(dto ExportDTO, filters []FilterDTO) (string, 
 		query += " where " + strings.Join(conditions, " and ")
 	}
 
+	sortColumn := "created_at"
+	if baseTable == "attendance_logs" || baseTable == "activities" {
+		sortColumn = "occurred_at"
+	}
+	query += fmt.Sprintf(" order by %s.%s desc", baseTable, sortColumn)
+
 	if dto.Limit > 0 && dto.Limit != helpers.UnlimitedLimit {
 		query += fmt.Sprintf(" limit %d", dto.Limit)
 	}

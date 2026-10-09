@@ -44,7 +44,7 @@ var MasterPermissions = []models.PermissionItem{
 	{Model: "activities", Action: "update"},
 	{Model: "activities", Action: "archive"},
 	{Model: "activities", Action: "delete"},
-	{Model: "notifications", Action: "export"},
+	{Model: "activities", Action: "export"},
 
 	{Model: "activity-items", Action: "get-all"},
 	{Model: "activity-items", Action: "get-by-id"},

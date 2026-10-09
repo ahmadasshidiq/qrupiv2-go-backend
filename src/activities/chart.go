@@ -1,6 +1,7 @@
 package activities
 
 import (
+	"clasenna-go-backend/libs/helpers"
 	"errors"
 	"time"
 
@@ -58,7 +59,7 @@ type ActivityChartResponse struct {
 }
 
 type parsedChartFilter struct {
-	institutionID   uuid.UUID
+	institutionID   *uuid.UUID
 	categoryID      *uuid.UUID
 	learningGroupID *uuid.UUID
 	activityType    string
@@ -68,7 +69,7 @@ type parsedChartFilter struct {
 }
 
 func (s *ActivityService) getChart(ctx *gin.Context, dto ChartFilterDTO) (*ActivityChartResponse, error) {
-	filter, err := parseChartFilter(ctx, dto)
+	filter, err := parseChartFilter(ctx, dto, s.DB)
 	if err != nil {
 		return nil, err
 	}
@@ -146,12 +147,18 @@ func (s *ActivityService) getChart(ctx *gin.Context, dto ChartFilterDTO) (*Activ
 	return result, nil
 }
 
-func parseChartFilter(ctx *gin.Context, dto ChartFilterDTO) (parsedChartFilter, error) {
+func parseChartFilter(ctx *gin.Context, dto ChartFilterDTO, db *gorm.DB) (parsedChartFilter, error) {
 	institutionID, err := uuid.Parse(ctx.GetString("institution_id"))
-	if err != nil {
+	var role string
+	db.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role)
+	if err != nil && !helpers.IsRole(role, "super_admin") {
 		return parsedChartFilter{}, errors.New("institution_id is required in authenticated session")
 	}
-	filter := parsedChartFilter{institutionID: institutionID, activityType: dto.Type, topLimit: dto.TopLimit}
+	var institutionPtr *uuid.UUID
+	if err == nil {
+		institutionPtr = &institutionID
+	}
+	filter := parsedChartFilter{institutionID: institutionPtr, activityType: dto.Type, topLimit: dto.TopLimit}
 	if filter.topLimit == 0 {
 		filter.topLimit = 10
 	}
@@ -196,8 +203,10 @@ func activityChartQuery(db *gorm.DB, filter parsedChartFilter) *gorm.DB {
 		Joins("JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL").
 		Joins("LEFT JOIN users ru ON ru.id = a.recorded_user_id AND ru.deleted_at IS NULL").
 		Joins("LEFT JOIN learning_groups lg ON lg.id = a.learning_group_id AND lg.deleted_at IS NULL").
-		Where("a.deleted_at IS NULL").
-		Where("u.institution_id = ?", filter.institutionID)
+		Where("a.deleted_at IS NULL")
+	if filter.institutionID != nil {
+		query = query.Where("u.institution_id = ?", *filter.institutionID)
+	}
 	if filter.categoryID != nil {
 		query = query.Where("ai.category_id = ?", *filter.categoryID)
 	}
