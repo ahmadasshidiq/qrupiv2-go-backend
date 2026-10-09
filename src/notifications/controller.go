@@ -22,6 +22,7 @@ func (c *Controller) Register(r *gin.RouterGroup) {
 	g.GET("", c.List)
 	g.GET("/unread-count", c.UnreadCount)
 	g.GET("/:id", c.Get)
+	g.GET("/announcements/:id", c.GetAnnouncement)
 	g.PATCH("/:id/read", c.MarkRead)
 	g.PATCH("/read-all", c.MarkAllRead)
 	protected.POST("/notifications/devices", c.RegisterDevice)
@@ -71,6 +72,29 @@ func (c *Controller) Get(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(200, n)
+}
+
+func (c *Controller) GetAnnouncement(ctx *gin.Context) {
+	id, e := uuid.Parse(ctx.Param("id"))
+	if e != nil {
+		ctx.JSON(400, gin.H{"error": "invalid announcement id"})
+		return
+	}
+
+	var a models.Announcement
+	q := c.service.DB.Where("id = ? AND deleted_at IS NULL", id)
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
+		q = q.Where("institution_id = ? OR audience = ?", institutionID, models.AnnouncementAudienceSystem)
+	}
+	if e = q.First(&a).Error; e != nil {
+		if errors.Is(e, gorm.ErrRecordNotFound) {
+			ctx.JSON(404, gin.H{"error": "announcement not found"})
+		} else {
+			ctx.JSON(500, gin.H{"error": e.Error()})
+		}
+		return
+	}
+	ctx.JSON(200, a)
 }
 func (c *Controller) MarkRead(ctx *gin.Context) {
 	id, e := uuid.Parse(ctx.Param("id"))
