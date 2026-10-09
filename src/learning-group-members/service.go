@@ -160,12 +160,22 @@ func (s *LearningGroupMemberService) update(id string, dto UpdateDTO) (*models.L
 	return &data, nil
 }
 
-func (s *LearningGroupMemberService) archive(id string) (bool, error) {
-	result := s.DB.Where("id = ?", id).Delete(&models.LearningGroupMember{})
+func (s *LearningGroupMemberService) scopedDelete(ctx *gin.Context, id string) *gorm.DB {
+	query := s.DB.Where("learning_group_members.id = ?", id)
+	role := ""
+	s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role)
+	if !helpers.IsRole(role, "super_admin") {
+		query = query.Joins("JOIN learning_groups ON learning_groups.id = learning_group_members.learning_group_id").Where("learning_groups.institution_id = ?", ctx.GetString("institution_id"))
+	}
+	return query
+}
+
+func (s *LearningGroupMemberService) archive(ctx *gin.Context, id string) (bool, error) {
+	result := s.scopedDelete(ctx, id).Delete(&models.LearningGroupMember{})
 	return result.RowsAffected > 0, result.Error
 }
 
-func (s *LearningGroupMemberService) delete(id string) (bool, error) {
-	result := s.DB.Unscoped().Where("id = ?", id).Delete(&models.LearningGroupMember{})
+func (s *LearningGroupMemberService) delete(ctx *gin.Context, id string) (bool, error) {
+	result := s.scopedDelete(ctx, id).Unscoped().Delete(&models.LearningGroupMember{})
 	return result.RowsAffected > 0, result.Error
 }

@@ -174,18 +174,25 @@ func (s *QuizSessionService) create(ctx *gin.Context, dto CreateDTO) (*models.Qu
 	return &data, nil
 }
 
-func (s *QuizSessionService) archive(id string) (bool, error) {
-	result := s.DB.Where("id = ?", id).Delete(&models.QuizSession{})
-	return result.RowsAffected > 0, result.Error
-}
-
-func (s *QuizSessionService) delete(id string) (bool, error) {
-	result := s.DB.Unscoped().Where("id = ?", id).Delete(&models.QuizSession{})
-	return result.RowsAffected > 0, result.Error
-}
-
 func (s *QuizSessionService) removeForUser(ctx *gin.Context, id string, permanent bool) (bool, error) {
-	query := s.DB.Where("id = ? AND user_id = ?", id, ctx.GetString("user_id"))
+	var role string
+	if err := s.DB.Table("roles").
+		Select("lower(replace(name, '-', '_'))").
+		Where("id = ?", ctx.GetString("role_id")).
+		Scan(&role).Error; err != nil {
+		return false, err
+	}
+
+	query := s.DB.Where("id = ?", id)
+	switch {
+	case helpers.IsRole(role, "super_admin"):
+		// Super admins may delete across institutions.
+	default:
+		// Other roles are limited to their institution. Permission middleware
+		// controls whether they may perform this action.
+		query = query.Where("institution_id = ?", ctx.GetString("institution_id"))
+	}
+
 	if permanent {
 		query = query.Unscoped()
 	}

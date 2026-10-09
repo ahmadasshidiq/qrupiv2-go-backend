@@ -531,7 +531,7 @@ func (s *UserService) delete(ctx *gin.Context, id string) (bool, error) {
 		return false, err
 	}
 
-	if err := s.DB.Unscoped().Where("id = ?", id).Delete(&models.User{}).Error; err != nil {
+	if err := query.Unscoped().Delete(&models.User{}).Error; err != nil {
 		return false, err
 	}
 	if data.AvatarURL != "" {

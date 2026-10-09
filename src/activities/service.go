@@ -498,11 +498,37 @@ func activityLimitPeriod(limitType models.ActivityLimitType, occurredAt time.Tim
 		return time.Time{}, time.Time{}, false, fmt.Errorf("unsupported activity limit type: %s", limitType)
 	}
 }
-func (s *ActivityService) archive(id string) (bool, error) {
-	result := s.DB.Where("id = ?", id).Delete(&models.Activity{})
+func (s *ActivityService) activityDeleteQuery(ctx *gin.Context, id string) (*gorm.DB, error) {
+	var role string
+	if err := s.DB.Table("roles").
+		Select("lower(replace(name, '-', '_'))").
+		Where("id = ?", ctx.GetString("role_id")).
+		Scan(&role).Error; err != nil {
+		return nil, err
+	}
+
+	query := s.DB.Where("id = ?", id)
+	switch {
+	case helpers.IsRole(role, "super_admin"):
+	default:
+		query = query.Where("institution_id = ?", ctx.GetString("institution_id"))
+	}
+	return query, nil
+}
+
+func (s *ActivityService) archive(ctx *gin.Context, id string) (bool, error) {
+	query, err := s.activityDeleteQuery(ctx, id)
+	if err != nil {
+		return false, err
+	}
+	result := query.Delete(&models.Activity{})
 	return result.RowsAffected > 0, result.Error
 }
-func (s *ActivityService) delete(id string) (bool, error) {
-	result := s.DB.Unscoped().Where("id = ?", id).Delete(&models.Activity{})
+func (s *ActivityService) delete(ctx *gin.Context, id string) (bool, error) {
+	query, err := s.activityDeleteQuery(ctx, id)
+	if err != nil {
+		return false, err
+	}
+	result := query.Unscoped().Delete(&models.Activity{})
 	return result.RowsAffected > 0, result.Error
 }

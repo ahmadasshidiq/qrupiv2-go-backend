@@ -210,7 +210,7 @@ func (c *ActivityController) Update(x *gin.Context) {
 // @Security     BearerAuth
 // @Router       /activities/{id}/archived [delete]
 func (c *ActivityController) Archive(x *gin.Context) {
-	helpers.HandleRemove(x, "activities", c.Service.archive)
+	helpers.HandleRemove(x, "activities", func(id string) (bool, error) { return c.Service.archive(x, id) })
 }
 
 // @Summary      Delete Activity permanently
@@ -219,5 +219,5 @@ func (c *ActivityController) Archive(x *gin.Context) {
 // @Security     BearerAuth
 // @Router       /activities/{id} [delete]
 func (c *ActivityController) Delete(x *gin.Context) {
-	helpers.HandleRemove(x, "activities", c.Service.delete)
+	helpers.HandleRemove(x, "activities", func(id string) (bool, error) { return c.Service.delete(x, id) })
 }

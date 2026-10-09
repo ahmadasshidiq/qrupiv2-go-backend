@@ -228,12 +228,20 @@ func (s *LearningGroupService) update(id string, dto UpdateDTO) (*models.Learnin
 	return &data, nil
 }
 
-func (s *LearningGroupService) archive(id string) (bool, error) {
-	result := s.DB.Where("id = ?", id).Delete(&models.LearningGroup{})
+func (s *LearningGroupService) scopedDelete(ctx *gin.Context, id string) *gorm.DB {
+	query := s.DB.Where("id = ?", id)
+	if !s.isSuperAdmin(ctx) {
+		query = query.Where("institution_id = ?", ctx.GetString("institution_id"))
+	}
+	return query
+}
+
+func (s *LearningGroupService) archive(ctx *gin.Context, id string) (bool, error) {
+	result := s.scopedDelete(ctx, id).Delete(&models.LearningGroup{})
 	return result.RowsAffected > 0, result.Error
 }
 
-func (s *LearningGroupService) delete(id string) (bool, error) {
-	result := s.DB.Unscoped().Where("id = ?", id).Delete(&models.LearningGroup{})
+func (s *LearningGroupService) delete(ctx *gin.Context, id string) (bool, error) {
+	result := s.scopedDelete(ctx, id).Unscoped().Delete(&models.LearningGroup{})
 	return result.RowsAffected > 0, result.Error
 }

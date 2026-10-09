@@ -298,18 +298,19 @@ func (s *QuizService) update(id string, dto UpdateDTO) (*models.Quiz, error) {
 	return &data, nil
 }
 
-func (s *QuizService) archive(id string) (bool, error) {
-	result := s.DB.Where("id = ?", id).Delete(&models.Quiz{})
-	return result.RowsAffected > 0, result.Error
-}
-
-func (s *QuizService) delete(id string) (bool, error) {
-	result := s.DB.Unscoped().Where("id = ?", id).Delete(&models.Quiz{})
-	return result.RowsAffected > 0, result.Error
-}
-
 func (s *QuizService) removeForUser(ctx *gin.Context, id string, permanent bool) (bool, error) {
-	query := s.DB.Where("id = ? AND created_user_id = ?", id, ctx.GetString("user_id"))
+	var role string
+	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
+		return false, err
+	}
+	query := s.DB.Where("id = ?", id)
+	switch {
+	case helpers.IsRole(role, "super_admin"):
+	case helpers.IsRole(role, "institution_admin"):
+		query = query.Where("institution_id = ?", ctx.GetString("institution_id"))
+	default:
+		query = query.Where("institution_id = ?", ctx.GetString("institution_id"))
+	}
 	if permanent {
 		query = query.Unscoped()
 	}

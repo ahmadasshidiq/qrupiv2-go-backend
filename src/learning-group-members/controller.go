@@ -102,7 +102,7 @@ func (c *LearningGroupMemberController) Update(ctx *gin.Context) {
 // @Security BearerAuth
 // @Router /learning-group-members/{id}/archived [delete]
 func (c *LearningGroupMemberController) Archive(ctx *gin.Context) {
-	helpers.HandleRemove(ctx, "learning-group-members", c.Service.archive)
+	helpers.HandleRemove(ctx, "learning-group-members", func(id string) (bool, error) { return c.Service.archive(ctx, id) })
 }
 
 // @Summary Delete Learning Group Member permanently
@@ -111,5 +111,5 @@ func (c *LearningGroupMemberController) Archive(ctx *gin.Context) {
 // @Security BearerAuth
 // @Router /learning-group-members/{id} [delete]
 func (c *LearningGroupMemberController) Delete(ctx *gin.Context) {
-	helpers.HandleRemove(ctx, "learning-group-members", c.Service.delete)
+	helpers.HandleRemove(ctx, "learning-group-members", func(id string) (bool, error) { return c.Service.delete(ctx, id) })
 }

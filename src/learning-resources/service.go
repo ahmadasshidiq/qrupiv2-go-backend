@@ -26,6 +26,12 @@ type LearningResourceService struct {
 	Notifier notif.Publisher
 }
 
+func (s *LearningResourceService) isSuperAdmin(ctx *gin.Context) bool {
+	var role string
+	s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role)
+	return helpers.IsRole(role, "super_admin")
+}
+
 func NewService(db *gorm.DB, publishers ...notif.Publisher) *LearningResourceService {
 	s := &LearningResourceService{DB: db}
 	if len(publishers) > 0 {
@@ -514,48 +520,25 @@ func createResourceGroupLinks(tx *gorm.DB, resourceID uuid.UUID, groups []models
 	return tx.Create(&links).Error
 }
 
-func (s *LearningResourceService) archive(id string) (bool, error) {
-	result := s.DB.Where("id = ?", id).Delete(&models.LearningResource{})
-	return result.RowsAffected > 0, result.Error
-}
-
-func (s *LearningResourceService) delete(id string) (bool, error) {
-	var data models.LearningResource
-	if err := s.DB.Unscoped().Preload("ResourceFiles").First(&data, "id = ?", id).Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return false, nil
-	} else if err != nil {
-		return false, err
-	}
-	if err := s.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("learning_resource_id = ?", data.ID).Delete(&models.LearningResourceGroup{}).Error; err != nil {
-			return err
-		}
-		if err := tx.Unscoped().Where("learning_resource_id = ?", data.ID).Delete(&models.LearningResourceFile{}).Error; err != nil {
-			return err
-		}
-		return tx.Unscoped().Delete(&data).Error
-	}); err != nil {
-		return false, err
-	}
-	fileURLs := make([]string, 0, len(data.ResourceFiles))
-	for _, file := range data.ResourceFiles {
-		fileURLs = append(fileURLs, file.URL)
-	}
-	deleteLearningResourceFiles(fileURLs)
-	return true, nil
-}
-
 func (s *LearningResourceService) removeForUser(ctx *gin.Context, id string, permanent bool) (bool, error) {
 	if permanent {
 		return s.deleteOwned(ctx, id)
 	}
-	result := s.DB.Where("id = ? AND uploaded_user_id = ?", id, ctx.GetString("user_id")).Delete(&models.LearningResource{})
+	query := s.DB.Where("id = ?", id)
+	if !s.isSuperAdmin(ctx) {
+		query = query.Where("institution_id = ?", ctx.GetString("institution_id"))
+	}
+	result := query.Delete(&models.LearningResource{})
 	return result.RowsAffected > 0, result.Error
 }
 
 func (s *LearningResourceService) deleteOwned(ctx *gin.Context, id string) (bool, error) {
 	var data models.LearningResource
-	if err := s.DB.Unscoped().Preload("ResourceFiles").Where("id = ? AND uploaded_user_id = ?", id, ctx.GetString("user_id")).First(&data).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	query := s.DB.Unscoped().Preload("ResourceFiles").Where("id = ?", id)
+	if !s.isSuperAdmin(ctx) {
+		query = query.Where("institution_id = ?", ctx.GetString("institution_id"))
+	}
+	if err := query.First(&data).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return false, nil
 	} else if err != nil {
 		return false, err
