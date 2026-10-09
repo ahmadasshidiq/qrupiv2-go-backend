@@ -36,7 +36,7 @@ var MasterPermissions = []models.PermissionItem{
 	{Model: "notifications", Action: "get-by-id"},
 	{Model: "notifications", Action: "create"},
 	{Model: "notifications", Action: "update"},
-	{Model: "notifications", Action: "export"},
+	{Model: "notifications", Action: "delete"},
 
 	{Model: "activities", Action: "get-all"},
 	{Model: "activities", Action: "get-by-id"},
@@ -44,6 +44,7 @@ var MasterPermissions = []models.PermissionItem{
 	{Model: "activities", Action: "update"},
 	{Model: "activities", Action: "archive"},
 	{Model: "activities", Action: "delete"},
+	{Model: "notifications", Action: "export"},
 
 	{Model: "activity-items", Action: "get-all"},
 	{Model: "activity-items", Action: "get-by-id"},
@@ -65,6 +66,7 @@ var MasterPermissions = []models.PermissionItem{
 	{Model: "learning-groups", Action: "update"},
 	{Model: "learning-groups", Action: "archive"},
 	{Model: "learning-groups", Action: "delete"},
+	{Model: "learning-groups", Action: "export"},
 
 	{Model: "learning-group-members", Action: "get-all"},
 	{Model: "learning-group-members", Action: "get-by-id"},
@@ -106,6 +108,7 @@ var MasterPermissions = []models.PermissionItem{
 	{Model: "attendance-logs", Action: "update"},
 	{Model: "attendance-logs", Action: "archive"},
 	{Model: "attendance-logs", Action: "delete"},
+	{Model: "attendance-logs", Action: "export"},
 
 	{Model: "attendance-absence-reasons", Action: "get-all"},
 	{Model: "attendance-absence-reasons", Action: "get-by-id"},

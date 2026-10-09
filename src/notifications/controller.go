@@ -19,6 +19,7 @@ func (c *Controller) Register(r *gin.RouterGroup) {
 	g.Use(cryptography.JWTMiddleware(c.service.DB))
 	protected := r.Group("")
 	protected.Use(cryptography.JWTMiddleware(c.service.DB))
+	permissions := cryptography.AccessMiddleware{DB: c.service.DB}
 	g.GET("", c.List)
 	g.GET("/unread-count", c.UnreadCount)
 	g.GET("/:id", c.Get)
@@ -27,7 +28,8 @@ func (c *Controller) Register(r *gin.RouterGroup) {
 	g.PATCH("/read-all", c.MarkAllRead)
 	protected.POST("/notifications/devices", c.RegisterDevice)
 	protected.GET("/notifications/announcements", c.ListAnnouncements)
-	protected.POST("/notifications/announcements", c.CreateAnnouncement)
+	protected.POST("/notifications/announcements", permissions.Handler("notifications", "create"), c.CreateAnnouncement)
+	protected.DELETE("/notifications/announcements/:id", permissions.Handler("notifications", "delete"), c.DeleteAnnouncement)
 }
 func (c *Controller) List(ctx *gin.Context) {
 	var rows []models.Notification
@@ -214,4 +216,30 @@ func (c *Controller) CreateAnnouncement(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(201, a.ID)
+}
+
+func (c *Controller) DeleteAnnouncement(ctx *gin.Context) {
+	id, e := uuid.Parse(ctx.Param("id"))
+	if e != nil {
+		ctx.JSON(400, gin.H{"error": "invalid announcement id"})
+		return
+	}
+	q := c.service.DB.Where("id = ? AND deleted_at IS NULL", id)
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
+		q = q.Where("institution_id = ?", institutionID)
+	}
+	var a models.Announcement
+	if e = q.First(&a).Error; e != nil {
+		if errors.Is(e, gorm.ErrRecordNotFound) {
+			ctx.JSON(404, gin.H{"error": "announcement not found"})
+		} else {
+			ctx.JSON(500, gin.H{"error": e.Error()})
+		}
+		return
+	}
+	if e = c.service.DB.Model(&a).Updates(map[string]any{"status": "cancelled", "next_run_at": nil, "deleted_at": time.Now()}).Error; e != nil {
+		ctx.JSON(500, gin.H{"error": e.Error()})
+		return
+	}
+	ctx.Status(204)
 }
