@@ -56,6 +56,7 @@ func main() {
 	r.Use(httpserver.Middleware(logger, metrics))
 	httpserver.RegisterProbes(r, metrics, nil)
 	service := RegisterAllModules(r.Group("/api/v1"), db, fcm, logger)
+	go service.StartScheduler(ctx)
 	go func() {
 		if err := consumer.Run(ctx, service.HandleEvent); err != nil {
 			logger.Error("consumer stopped", "error", err)

@@ -153,12 +153,27 @@ func (c *Controller) CreateAnnouncement(ctx *gin.Context) {
 		ctx.JSON(400, gin.H{"error": "title and message are required"})
 		return
 	}
+	if d.RepeatType == "" {
+		d.RepeatType = "none"
+	}
+	if d.RepeatType != "none" && d.RepeatType != "daily" && d.RepeatType != "weekly" && d.RepeatType != "monthly" {
+		ctx.JSON(400, gin.H{"error": "repeat_type must be none, daily, weekly, or monthly"})
+		return
+	}
+	if d.SendAt != nil && d.RepeatUntil != nil && d.RepeatUntil.Before(*d.SendAt) {
+		ctx.JSON(400, gin.H{"error": "repeat_until must be after send_at"})
+		return
+	}
 	creator, e := uuid.Parse(ctx.GetString("user_id"))
 	if e != nil {
 		ctx.JSON(401, gin.H{"error": "invalid user"})
 		return
 	}
-	a := models.Announcement{CreatedBy: creator, Audience: d.Audience, Title: d.Title, Message: d.Message}
+	status := "published"
+	if d.SendAt != nil && d.SendAt.After(time.Now()) {
+		status = "scheduled"
+	}
+	a := models.Announcement{CreatedBy: creator, Audience: d.Audience, Title: d.Title, Message: d.Message, SendAt: d.SendAt, NextRunAt: d.SendAt, RepeatUntil: d.RepeatUntil, RepeatType: d.RepeatType, Status: status}
 	if v := ctx.GetString("institution_id"); v != "" {
 		id, _ := uuid.Parse(v)
 		a.InstitutionID = &id
@@ -190,7 +205,11 @@ func (c *Controller) CreateAnnouncement(ctx *gin.Context) {
 	for _, id := range ids {
 		rec = append(rec, id.String())
 	}
-	if e = c.service.Persist(ctx, string("announcement.created"), ctx.GetString("institution_id"), rec, d.Title, d.Message, "", "", "", "", nil); e != nil {
+	if d.SendAt != nil && d.SendAt.After(time.Now()) {
+		ctx.JSON(201, a.ID)
+		return
+	}
+	if e = c.service.Persist(ctx, string("announcement.created"), ctx.GetString("institution_id"), rec, d.Title, d.Message, a.ID.String(), "", "", "", nil); e != nil {
 		ctx.JSON(500, gin.H{"error": e.Error()})
 		return
 	}

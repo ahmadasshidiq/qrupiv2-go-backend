@@ -1,12 +1,18 @@
 package notifications
 
-import "clasenna-go-backend/libs/models"
+import (
+	"clasenna-go-backend/libs/models"
+	"time"
+)
 
 type AnnouncementDTO struct {
-	Audience models.AnnouncementAudience `json:"audience"`
-	TargetID *string                     `json:"target_id"`
-	Title    string                      `json:"title"`
-	Message  string                      `json:"message"`
+	Audience    models.AnnouncementAudience `json:"audience"`
+	TargetID    *string                     `json:"target_id"`
+	Title       string                      `json:"title"`
+	Message     string                      `json:"message"`
+	SendAt      *time.Time                  `json:"send_at"`
+	RepeatType  string                      `json:"repeat_type"`
+	RepeatUntil *time.Time                  `json:"repeat_until"`
 }
 
 type DeviceDTO struct {

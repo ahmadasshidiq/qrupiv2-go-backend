@@ -48,6 +48,11 @@ type Announcement struct {
 	WebURL        string               `gorm:"type:text" json:"web_url,omitempty"`
 	MobileRoute   string               `gorm:"type:varchar(255)" json:"mobile_route,omitempty"`
 	PublishedAt   *time.Time           `gorm:"index" json:"published_at,omitempty"`
+	SendAt        *time.Time           `gorm:"index" json:"send_at,omitempty"`
+	RepeatType    string               `gorm:"type:varchar(20);not null;default:'none'" json:"repeat_type"`
+	RepeatUntil   *time.Time           `json:"repeat_until,omitempty"`
+	NextRunAt     *time.Time           `gorm:"index" json:"next_run_at,omitempty"`
+	Status        string               `gorm:"type:varchar(20);not null;default:'draft'" json:"status"`
 	CreatedAt     time.Time            `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time            `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt     gorm.DeletedAt       `gorm:"index" json:"-"`
