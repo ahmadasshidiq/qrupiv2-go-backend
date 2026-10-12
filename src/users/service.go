@@ -208,6 +208,8 @@ func (s *UserService) create(ctx *gin.Context, dto CreateDTO) (*models.User, err
 		Phone:         dto.Phone,
 		ContextType:   dto.ContextType,
 		ContextCode:   dto.ContextCode,
+		Latitude:      dto.Latitude,
+		Longitude:     dto.Longitude,
 		Status:        models.UserStatus(dto.Status),
 		Password:      encodedTwo,
 		LayerOne:      string(layerOneStr),
@@ -403,6 +405,12 @@ func (s *UserService) update(ctx *gin.Context, id string, dto UpdateDTO) (*model
 
 	if dto.ContextType != nil {
 		data.ContextType = *dto.ContextType
+	}
+	if dto.Latitude != nil {
+		data.Latitude = dto.Latitude
+	}
+	if dto.Longitude != nil {
+		data.Longitude = dto.Longitude
 	}
 	if dto.Phone != nil {
 		data.Phone = *dto.Phone

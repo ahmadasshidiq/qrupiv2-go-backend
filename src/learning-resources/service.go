@@ -117,6 +117,9 @@ func (s *LearningResourceService) getAll(ctx *gin.Context, dto DefaultFindDTO) (
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" && !helpers.IsRole(role, "super_admin") {
 		params["i.id"] = institutionID
 	}
+	if err := helpers.ApplyRegionScope(ctx, params, "i"); err != nil {
+		return nil, err
+	}
 	viewerJoin := "left join learning_group_members viewer_lgm on viewer_lgm.learning_group_id = lrg.learning_group_id and viewer_lgm.deleted_at is null"
 	if !isStudentViewer && !helpers.IsRole(role, "instructor") {
 		viewerJoin = "left join learning_group_members viewer_lgm on false"

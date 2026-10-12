@@ -60,6 +60,8 @@ type ActivityChartResponse struct {
 
 type parsedChartFilter struct {
 	institutionID   *uuid.UUID
+	regionColumn    string
+	regionCode      string
 	categoryID      *uuid.UUID
 	learningGroupID *uuid.UUID
 	activityType    string
@@ -151,14 +153,21 @@ func parseChartFilter(ctx *gin.Context, dto ChartFilterDTO, db *gorm.DB) (parsed
 	institutionID, err := uuid.Parse(ctx.GetString("institution_id"))
 	var role string
 	db.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role)
-	if err != nil && !helpers.IsRole(role, "super_admin") {
+	regionColumn := map[string]string{
+		"province": "i.province_code",
+		"regency":  "i.regency_code",
+		"district": "i.district_code",
+		"village":  "i.village_code",
+	}[ctx.GetString("region_level")]
+	regionCode := ctx.GetString("region_code")
+	if err != nil && !helpers.IsRole(role, "super_admin") && (regionColumn == "" || regionCode == "") {
 		return parsedChartFilter{}, errors.New("institution_id is required in authenticated session")
 	}
 	var institutionPtr *uuid.UUID
 	if err == nil {
 		institutionPtr = &institutionID
 	}
-	filter := parsedChartFilter{institutionID: institutionPtr, activityType: dto.Type, topLimit: dto.TopLimit}
+	filter := parsedChartFilter{institutionID: institutionPtr, regionColumn: regionColumn, regionCode: regionCode, activityType: dto.Type, topLimit: dto.TopLimit}
 	if filter.topLimit == 0 {
 		filter.topLimit = 10
 	}
@@ -201,11 +210,15 @@ func activityChartQuery(db *gorm.DB, filter parsedChartFilter) *gorm.DB {
 		Joins("JOIN activity_items ai ON ai.id = a.item_id AND ai.deleted_at IS NULL").
 		Joins("LEFT JOIN activity_categories ac ON ac.id = ai.category_id AND ac.deleted_at IS NULL").
 		Joins("JOIN users u ON u.id = a.user_id AND u.deleted_at IS NULL").
+		Joins("LEFT JOIN institutions i ON i.id = u.institution_id AND i.deleted_at IS NULL").
 		Joins("LEFT JOIN users ru ON ru.id = a.recorded_user_id AND ru.deleted_at IS NULL").
 		Joins("LEFT JOIN learning_groups lg ON lg.id = a.learning_group_id AND lg.deleted_at IS NULL").
 		Where("a.deleted_at IS NULL")
 	if filter.institutionID != nil {
 		query = query.Where("u.institution_id = ?", *filter.institutionID)
+	}
+	if filter.regionColumn != "" && filter.regionCode != "" {
+		query = query.Where(filter.regionColumn+" = ?", filter.regionCode)
 	}
 	if filter.categoryID != nil {
 		query = query.Where("ai.category_id = ?", *filter.categoryID)

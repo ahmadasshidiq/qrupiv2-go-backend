@@ -101,6 +101,7 @@ var MasterPermissions = []models.PermissionItem{
 	{Model: "quiz-sessions", Action: "update"},
 	{Model: "quiz-sessions", Action: "archive"},
 	{Model: "quiz-sessions", Action: "delete"},
+	{Model: "quiz-sessions", Action: "export"},
 
 	{Model: "attendance-logs", Action: "get-all"},
 	{Model: "attendance-logs", Action: "get-by-id"},

@@ -51,7 +51,7 @@ func (s *Aggregator) GetForRole(ctx context.Context, headers http.Header, query 
 	if isStudentRole(role) {
 		effectiveQuery.Set("user_id", headers.Get("X-User-ID"))
 	}
-	if institutionID := headers.Get("X-Institution-ID"); institutionID != "" {
+	if institutionID := headers.Get("X-Institution-ID"); institutionID != "" && !helpers.IsRole(role, "dinas_pendidikan") {
 		effectiveQuery.Set("institution_id", institutionID)
 	}
 	if effectiveQuery.Get("limit") == "" {
@@ -117,7 +117,7 @@ func (s *Aggregator) GetForRole(ctx context.Context, headers http.Header, query 
 			data[name] = v
 		}
 	}
-	r := &Response{Generated: time.Now().UTC().Format(time.RFC3339), Summary: summarize(role, data), Rankings: buildRankings(role, data), Data: dashboardData(role, data)}
+	r := &Response{Generated: time.Now().UTC().Format(time.RFC3339), Summary: summarize(role, data, headers), Rankings: buildRankings(role, data), Data: dashboardData(role, data)}
 	if b, err := json.Marshal(r); err == nil && s.Cache != nil && !hasUpstreamErrors {
 		_ = s.Cache.Set(ctx, key, b, s.TTL).Err()
 	}
@@ -139,6 +139,7 @@ func dashboardData(role string, data map[string]any) map[string]any {
 	}
 	if locations := institutionLocations(data["institutions"], data["users"]); len(locations) > 0 {
 		result["institution_map"] = locations
+		result["institution_locations"] = locations
 	}
 	if isInstructorRole(role) {
 		result["learning_groups"] = instructorGroupSummary(data["learning_groups"], data["learning_group_members"], data["attendance"], data["quiz_sessions"])
@@ -307,7 +308,7 @@ func dashboardPaths(role string) map[string]string {
 	case helpers.IsRole(role, "institution_admin"):
 		return map[string]string{"users": "/users", "learning_groups": "/learning-groups", "learning_group_members": "/learning-group-members", "activities": "/activities", "positive_activity_chart": "/activities/chart", "violation_activity_chart": "/activities/chart", "quiz_sessions": "/quiz-sessions", "attendance": "/attendance-logs"}
 	case helpers.IsRole(role, "dinas_pendidikan"):
-		return map[string]string{"institutions": "/institutions", "users": "/users", "learning_groups": "/learning-groups", "activities": "/activities", "attendance": "/attendance-logs"}
+		return map[string]string{"institutions": "/institutions", "users": "/users", "learning_groups": "/learning-groups", "learning_group_members": "/learning-group-members", "activities": "/activities", "positive_activity_chart": "/activities/chart", "violation_activity_chart": "/activities/chart", "quiz_sessions": "/quiz-sessions", "attendance": "/attendance-logs", "quiz_rankings": "/quiz-sessions/rankings"}
 	default:
 		return map[string]string{"users": "/users", "institutions": "/institutions", "learning_groups": "/learning-groups", "learning_group_members": "/learning-group-members", "activities": "/activities", "quiz_sessions": "/quiz-sessions", "attendance": "/attendance-logs"}
 	}
@@ -403,7 +404,7 @@ func findStrings(value any, key string) []string {
 	return result
 }
 
-func summarize(role string, data map[string]any) map[string]any {
+func summarize(role string, data map[string]any, headers http.Header) map[string]any {
 	count := func(name string) int { return collectionCount(data[name]) }
 	totalActivities := count("activities")
 	positiveActivities := chartSummaryCount(data["positive_activity_chart"], "positive_activities")
@@ -418,7 +419,8 @@ func summarize(role string, data map[string]any) map[string]any {
 	}
 	if helpers.IsRole(role, "dinas_pendidikan") {
 		result["scope"] = "region"
-		result["region_level"] = "from_authenticated_scope"
+		result["region_level"] = headers.Get("X-Region-Level")
+		result["region_code"] = headers.Get("X-Region-Code")
 		return result
 	}
 	switch strings.ToLower(role) {

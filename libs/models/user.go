@@ -19,6 +19,8 @@ type User struct {
 	InstitutionID *uuid.UUID     `gorm:"type:uuid;index" json:"institution_id"`
 	RegionLevel   string         `gorm:"type:varchar(20);index" json:"region_level,omitempty"`
 	RegionCode    string         `gorm:"type:varchar(20);index" json:"region_code,omitempty"`
+	Latitude      *float64       `gorm:"type:decimal(10,8)" json:"latitude,omitempty"`
+	Longitude     *float64       `gorm:"type:decimal(11,8)" json:"longitude,omitempty"`
 	RoleID        uuid.UUID      `gorm:"type:uuid;not null" json:"role_id"`
 	Name          string         `gorm:"type:varchar(255);not null" json:"name"`
 	Email         string         `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
