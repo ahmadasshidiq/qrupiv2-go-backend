@@ -29,6 +29,7 @@ func (c *Controller) Register(r *gin.RouterGroup) {
 	protected.POST("/notifications/devices", c.RegisterDevice)
 	protected.GET("/notifications/announcements", c.ListAnnouncements)
 	protected.POST("/notifications/announcements", permissions.Handler("notifications", "create"), c.CreateAnnouncement)
+	protected.PATCH("/notifications/announcements/:id", permissions.Handler("notifications", "update"), c.UpdateAnnouncement)
 	protected.DELETE("/notifications/announcements/:id", permissions.Handler("notifications", "delete"), c.DeleteAnnouncement)
 }
 func (c *Controller) List(ctx *gin.Context) {
@@ -242,4 +243,76 @@ func (c *Controller) DeleteAnnouncement(ctx *gin.Context) {
 		return
 	}
 	ctx.Status(204)
+}
+
+func (c *Controller) UpdateAnnouncement(ctx *gin.Context) {
+	id, e := uuid.Parse(ctx.Param("id"))
+	if e != nil {
+		ctx.JSON(400, gin.H{"error": "invalid announcement id"})
+		return
+	}
+	var d AnnouncementDTO
+	if e = ctx.ShouldBindJSON(&d); e != nil || d.Title == "" || d.Message == "" {
+		ctx.JSON(400, gin.H{"error": "title and message are required"})
+		return
+	}
+	if d.RepeatType == "" {
+		d.RepeatType = "none"
+	}
+	if d.RepeatType != "none" && d.RepeatType != "daily" && d.RepeatType != "weekly" && d.RepeatType != "monthly" {
+		ctx.JSON(400, gin.H{"error": "repeat_type must be none, daily, weekly, or monthly"})
+		return
+	}
+	if d.SendAt == nil || !d.SendAt.After(time.Now()) {
+		ctx.JSON(400, gin.H{"error": "send_at must be a future time for a scheduled announcement"})
+		return
+	}
+	if d.RepeatUntil != nil && d.RepeatUntil.Before(*d.SendAt) {
+		ctx.JSON(400, gin.H{"error": "repeat_until must be after send_at"})
+		return
+	}
+
+	q := c.service.DB.Where("id = ? AND status = ? AND deleted_at IS NULL", id, "scheduled")
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
+		q = q.Where("institution_id = ?", institutionID)
+	}
+	var a models.Announcement
+	if e = q.First(&a).Error; e != nil {
+		if errors.Is(e, gorm.ErrRecordNotFound) {
+			ctx.JSON(404, gin.H{"error": "scheduled announcement not found"})
+		} else {
+			ctx.JSON(500, gin.H{"error": e.Error()})
+		}
+		return
+	}
+
+	updates := map[string]any{
+		"audience":     d.Audience,
+		"title":        d.Title,
+		"message":      d.Message,
+		"send_at":      d.SendAt,
+		"next_run_at":  d.SendAt,
+		"repeat_type":  d.RepeatType,
+		"repeat_until": d.RepeatUntil,
+		"status":       "scheduled",
+	}
+	if d.TargetID != nil {
+		targetID, parseErr := uuid.Parse(*d.TargetID)
+		if parseErr != nil {
+			ctx.JSON(400, gin.H{"error": "invalid target_id"})
+			return
+		}
+		updates["target_id"] = targetID
+	} else {
+		updates["target_id"] = nil
+	}
+	if e = c.service.DB.Model(&a).Updates(updates).Error; e != nil {
+		ctx.JSON(500, gin.H{"error": e.Error()})
+		return
+	}
+	if e = c.service.DB.First(&a, "id = ?", id).Error; e != nil {
+		ctx.JSON(500, gin.H{"error": e.Error()})
+		return
+	}
+	ctx.JSON(200, a)
 }
