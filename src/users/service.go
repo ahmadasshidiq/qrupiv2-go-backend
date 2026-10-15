@@ -73,6 +73,7 @@ func (s *UserService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 			u.type,
 			u.phone,
 			u.barcode,
+			u.rfid_card_code,
 			u.status,
 			u.avatar_url,
 			u.role_id,
@@ -184,6 +185,16 @@ func (s *UserService) create(ctx *gin.Context, dto CreateDTO) (*models.User, err
 	}
 
 	var barcodeValue, pinHash string
+	rfidCardCode := strings.TrimSpace(dto.RFIDCardCode)
+	if rfidCardCode != "" {
+		var exists int64
+		if err := s.DB.Model(&models.User{}).Where("rfid_card_code = ?", rfidCardCode).Count(&exists).Error; err != nil {
+			return nil, err
+		}
+		if exists > 0 {
+			return nil, errors.New("rfid card code already in use")
+		}
+	}
 	if userType == "student" {
 		if instID == nil {
 			return nil, errors.New("institution_id is required for student")
@@ -217,6 +228,7 @@ func (s *UserService) create(ctx *gin.Context, dto CreateDTO) (*models.User, err
 		Salt:          salt,
 		PinHash:       pinHash,
 		Barcode:       barcodeValue,
+		RFIDCardCode:  rfidCardCode,
 		AvatarURL:     dto.AvatarURL,
 	}
 
@@ -434,6 +446,20 @@ func (s *UserService) update(ctx *gin.Context, id string, dto UpdateDTO) (*model
 
 	if dto.ContextCode != nil {
 		data.ContextCode = *dto.ContextCode
+	}
+
+	if dto.RFIDCardCode != nil {
+		rfidCardCode := strings.TrimSpace(*dto.RFIDCardCode)
+		if rfidCardCode != "" {
+			var exists int64
+			if err := s.DB.Model(&models.User{}).Where("rfid_card_code = ? and id != ?", rfidCardCode, id).Count(&exists).Error; err != nil {
+				return nil, err
+			}
+			if exists > 0 {
+				return nil, errors.New("rfid card code already in use")
+			}
+		}
+		data.RFIDCardCode = rfidCardCode
 	}
 
 	if dto.Status != nil {

@@ -34,6 +34,18 @@ func (s *RoleService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 
 	params["roles.deleted_at.isnull"] = ""
 
+	// Only Super Admin can see the privileged system roles.
+	var viewerRole string
+	if err := s.DB.Table("roles").
+		Select("lower(replace(name, '-', '_'))").
+		Where("id = ?", ctx.GetString("role_id")).
+		Scan(&viewerRole).Error; err != nil {
+		return nil, err
+	}
+	if !helpers.IsRole(viewerRole, "super_admin") {
+		params["roles.name.notin"] = []string{"Super Admin", "Dinas Pendidikan"}
+	}
+
 	result, err := helpers.BuildPaginatedQuery(
 		ctx,
 		s.DB,       // DB

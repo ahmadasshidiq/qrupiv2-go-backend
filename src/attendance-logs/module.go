@@ -18,6 +18,7 @@ func RegisterAttendanceLogModule(router *gin.RouterGroup, db *gorm.DB) {
 		group.GET("", permissions.Handler("attendance-logs", "get-all"), controller.GetAll)
 		group.GET("/:id", permissions.Handler("attendance-logs", "get-by-id"), controller.GetByID)
 		group.POST("/check-in", permissions.Handler("attendance-logs", "create"), controller.CheckIn)
+		group.POST("/rfid/check-in", permissions.Handler("attendance-logs", "create"), controller.RFIDCheckIn)
 		group.POST("/bulk", permissions.Handler("attendance-logs", "create"), controller.CreateBulk)
 		group.POST("", permissions.Handler("attendance-logs", "create"), controller.Create)
 		group.PUT("/:id/check-out", permissions.Handler("attendance-logs", "update"), controller.CheckOut)

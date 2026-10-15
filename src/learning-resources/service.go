@@ -529,7 +529,7 @@ func (s *LearningResourceService) removeForUser(ctx *gin.Context, id string, per
 	}
 	query := s.DB.Where("id = ?", id)
 	if !s.isSuperAdmin(ctx) {
-		query = query.Where("institution_id = ?", ctx.GetString("institution_id"))
+		query = query.Where("EXISTS (SELECT 1 FROM users WHERE users.id = learning_resources.uploaded_user_id AND users.institution_id = ?)", ctx.GetString("institution_id"))
 	}
 	result := query.Delete(&models.LearningResource{})
 	return result.RowsAffected > 0, result.Error
@@ -539,7 +539,7 @@ func (s *LearningResourceService) deleteOwned(ctx *gin.Context, id string) (bool
 	var data models.LearningResource
 	query := s.DB.Unscoped().Preload("ResourceFiles").Where("id = ?", id)
 	if !s.isSuperAdmin(ctx) {
-		query = query.Where("institution_id = ?", ctx.GetString("institution_id"))
+		query = query.Where("EXISTS (SELECT 1 FROM users WHERE users.id = learning_resources.uploaded_user_id AND users.institution_id = ?)", ctx.GetString("institution_id"))
 	}
 	if err := query.First(&data).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return false, nil

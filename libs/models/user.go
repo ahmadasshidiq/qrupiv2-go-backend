@@ -32,6 +32,7 @@ type User struct {
 	Password      string         `gorm:"type:text;not null" json:"-"`
 	PinHash       string         `gorm:"type:text" json:"-"`
 	Barcode       string         `gorm:"type:varchar(255);uniqueIndex:idx_users_barcode,where:barcode <> ''" json:"barcode,omitempty"`
+	RFIDCardCode  string         `gorm:"column:rfid_card_code;type:varchar(255);uniqueIndex:idx_users_rfid_card_code,where:rfid_card_code <> ''" json:"rfid_card_code,omitempty"`
 	Salt          string         `gorm:"type:varchar(255);not null" json:"-"`
 	LayerOne      string         `gorm:"type:text" json:"-"`
 	LayerTwo      string         `gorm:"type:text" json:"-"`

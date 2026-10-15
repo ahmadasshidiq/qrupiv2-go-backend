@@ -5,6 +5,35 @@ import (
 	"gorm.io/gorm"
 )
 
+func migrateUserRFIDCardCode(db *gorm.DB) error {
+	migrator := db.Migrator()
+	if !migrator.HasTable(&models.User{}) {
+		return nil
+	}
+	hasRFID := migrator.HasColumn(&models.User{}, "rfid_card_code")
+	hasLegacyRFID := migrator.HasColumn(&models.User{}, "rf_id_card_code")
+	if !hasRFID && hasLegacyRFID {
+		if err := db.Exec(`ALTER TABLE users RENAME COLUMN rf_id_card_code TO rfid_card_code`).Error; err != nil {
+			return err
+		}
+		hasRFID = true
+		hasLegacyRFID = false
+	}
+	if !hasRFID {
+		if err := db.Exec(`ALTER TABLE users ADD COLUMN rfid_card_code varchar(255)`).Error; err != nil {
+			return err
+		}
+	} else if hasLegacyRFID {
+		if err := db.Exec(`UPDATE users SET rfid_card_code = COALESCE(NULLIF(rfid_card_code, ''), rf_id_card_code) WHERE rf_id_card_code IS NOT NULL`).Error; err != nil {
+			return err
+		}
+		if err := db.Exec(`ALTER TABLE users DROP COLUMN rf_id_card_code`).Error; err != nil {
+			return err
+		}
+	}
+	return db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_rfid_card_code ON users (rfid_card_code) WHERE rfid_card_code <> ''`).Error
+}
+
 func migrateAttendanceOccurredAt(db *gorm.DB) error {
 	migrator := db.Migrator()
 	if !migrator.HasTable(&models.AttendanceLog{}) || migrator.HasColumn(&models.AttendanceLog{}, "occurred_at") {

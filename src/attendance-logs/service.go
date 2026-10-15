@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"clasenna-go-backend/libs/helpers"
@@ -176,6 +177,70 @@ func (s *AttendanceLogService) checkIn(ctx *gin.Context, dto CheckInDTO) (*model
 		Status: dto.Status, RequiresCheckOut: dto.RequiresCheckOut,
 		OccurredAt: dto.OccurredAt,
 		CheckInAt:  &checkInAt, CheckInLat: dto.LocationLat, CheckInLong: dto.LocationLong,
+	})
+}
+
+func (s *AttendanceLogService) rfidCheckIn(ctx *gin.Context, dto RFIDCheckInDTO) (*models.AttendanceLog, error) {
+	teacherID, err := uuid.Parse(ctx.GetString("user_id"))
+	if err != nil {
+		return nil, errors.New("authenticated user_id is required")
+	}
+	groupID, err := uuid.Parse(dto.LearningGroupID)
+	if err != nil {
+		return nil, errors.New("invalid learning_group_id format")
+	}
+	cardCode := strings.TrimSpace(dto.RFIDCardCode)
+	if cardCode == "" {
+		return nil, errors.New("rfid_card_code is required")
+	}
+
+	// The authenticated teacher must be an instructor in this group.
+	var instructorCount int64
+	instructorQuery := s.DB.Model(&models.LearningGroupMember{}).
+		Joins("JOIN learning_groups ON learning_groups.id = learning_group_members.learning_group_id").
+		Where("learning_group_members.learning_group_id = ? AND learning_group_members.user_id = ? AND learning_group_members.role_in_group = ? AND learning_group_members.deleted_at IS NULL", groupID, teacherID, models.RoleInGroupInstructor)
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
+		instructorQuery = instructorQuery.Where("learning_groups.institution_id = ?", institutionID)
+	}
+	if err := instructorQuery.Count(&instructorCount).Error; err != nil {
+		return nil, err
+	}
+	if instructorCount == 0 {
+		return nil, errors.New("authenticated user is not an instructor of the learning group")
+	}
+
+	var student models.User
+	studentQuery := s.DB.Where("users.rfid_card_code = ? AND users.type = ? AND users.status = ?", cardCode, "student", models.UserStatusActive)
+	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
+		studentQuery = studentQuery.Where("users.institution_id = ?", institutionID)
+	}
+	if err := studentQuery.First(&student).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("active student with this rfid card was not found")
+		}
+		return nil, err
+	}
+
+	var studentCount int64
+	if err := s.DB.Model(&models.LearningGroupMember{}).Where("learning_group_id = ? AND user_id = ? AND role_in_group = ? AND deleted_at IS NULL", groupID, student.ID, models.RoleInGroupStudent).Count(&studentCount).Error; err != nil {
+		return nil, err
+	}
+	if studentCount == 0 {
+		return nil, errors.New("student is not a member of the learning group")
+	}
+
+	occurredAt := time.Now()
+	if dto.OccurredAt != nil {
+		occurredAt = *dto.OccurredAt
+	}
+	status := dto.Status
+	if status == "" {
+		status = string(models.AttendanceStatusOnTime)
+	}
+	return s.checkIn(ctx, CheckInDTO{
+		UserID: student.ID.String(), LearningGroupID: groupID.String(), Type: string(models.AttendanceTypeStudent),
+		Status: status, RequiresCheckOut: dto.RequiresCheckOut, OccurredAt: occurredAt,
+		CheckInAt: &occurredAt, LocationLat: dto.LocationLat, LocationLong: dto.LocationLong,
 	})
 }
 

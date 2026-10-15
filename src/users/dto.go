@@ -22,6 +22,7 @@ type CreateDTO struct {
 	Longitude     *float64 `form:"longitude" binding:"omitempty,longitude"`
 	Status        string   `form:"status" binding:"required,oneof=active inactive"`
 	AvatarURL     string   `form:"avatar_url" binding:"omitempty,url"`
+	RFIDCardCode  string   `form:"rfid_card_code" binding:"omitempty,max=255"`
 }
 
 type UpdateDTO struct {
@@ -39,4 +40,5 @@ type UpdateDTO struct {
 	Longitude     *float64 `form:"longitude" binding:"omitempty,longitude"`
 	Status        *string  `form:"status" binding:"omitempty,oneof=active inactive"`
 	AvatarURL     *string  `form:"avatar_url" binding:"omitempty,url"`
+	RFIDCardCode  *string  `form:"rfid_card_code" binding:"omitempty,max=255"`
 }

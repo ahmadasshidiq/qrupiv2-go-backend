@@ -140,6 +140,28 @@ func (c *AttendanceLogController) CheckIn(ctx *gin.Context) {
 	helpers.RespondSuccess(ctx, "attendance-logs", http.StatusCreated, data.ID)
 }
 
+// @Summary Check in Attendance using RFID card
+// @Tags Attendance Log API
+// @Param dto body RFIDCheckInDTO true "RFID Attendance Check-in Data"
+// @Security BearerAuth
+// @Router /attendance-logs/rfid/check-in [post]
+func (c *AttendanceLogController) RFIDCheckIn(ctx *gin.Context) {
+	var dto RFIDCheckInDTO
+	if err := ctx.ShouldBindJSON(&dto); err != nil {
+		helpers.RespondError(ctx, "attendance-logs", http.StatusBadRequest, err)
+		return
+	}
+	data, err := c.Service.rfidCheckIn(ctx, dto)
+	if err != nil {
+		helpers.RespondError(ctx, "attendance-logs", http.StatusBadRequest, err)
+		return
+	}
+	helpers.RespondSuccess(ctx, "attendance-logs", http.StatusCreated, gin.H{
+		"id":      data.ID,
+		"user_id": data.UserID,
+	})
+}
+
 // @Summary Check out Attendance
 // @Tags Attendance Log API
 // @Param id path string true "Attendance Log ID"
