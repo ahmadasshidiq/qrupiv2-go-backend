@@ -45,6 +45,36 @@ func (s *QuizService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 	if err != nil {
 		return nil, err
 	}
+	var role string
+	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
+		return nil, err
+	}
+
+	sessionJoin := `left join lateral (
+		select qs.score, qs.start_time, qs.end_time, qs.answers
+		from quiz_sessions qs
+		where qs.quiz_id = q.id
+		  and qs.status = 'submitted'
+		  and qs.deleted_at is null
+		order by qs.updated_at desc, qs.id desc
+		limit 1
+	) qs on true`
+	if helpers.IsRole(role, "student") {
+		userID, err := uuid.Parse(ctx.GetString("user_id"))
+		if err != nil {
+			return nil, errors.New("invalid authenticated user id")
+		}
+		sessionJoin = fmt.Sprintf(`left join lateral (
+			select qs.score, qs.start_time, qs.end_time, qs.answers
+			from quiz_sessions qs
+			where qs.quiz_id = q.id
+			  and qs.user_id = '%s'
+			  and qs.status = 'submitted'
+			  and qs.deleted_at is null
+			order by qs.updated_at desc, qs.id desc
+			limit 1
+		) qs on true`, userID)
+	}
 
 	baseQuery := fmt.Sprintf(`
 		select
@@ -61,9 +91,9 @@ func (s *QuizService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 		join institutions i on i.id = q.institution_id
 		join learning_groups lg on lg.id = q.learning_group_id
 		join users u on u.id = q.created_user_id
-		left join quiz_sessions qs on qs.quiz_id = q.id and qs.status = 'submitted'
 		%s
-	`, scopeJoin)
+		%s
+	`, sessionJoin, scopeJoin)
 
 	result, err := helpers.BuildPaginatedQuery(
 		ctx,
@@ -77,10 +107,6 @@ func (s *QuizService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 	)
 
 	if err != nil {
-		return nil, err
-	}
-	var role string
-	if err := s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role).Error; err != nil {
 		return nil, err
 	}
 	if helpers.IsRole(role, "student") {
