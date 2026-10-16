@@ -156,6 +156,10 @@ func (s *QuizService) getByID(ctx *gin.Context, id string) (*models.Quiz, error)
 }
 
 func (s *QuizService) create(dto CreateDTO) (*models.Quiz, error) {
+	if err := validateQuizQuestionPoints(dto.QuizQuestions); err != nil {
+		return nil, err
+	}
+
 	var count int64
 	s.DB.Model(&models.Quiz{}).Where("title = ? and learning_group_id = ?", dto.Title, dto.LearningGroupID).Count(&count)
 	if count > 0 {
@@ -254,6 +258,10 @@ func (s *QuizService) update(id string, dto UpdateDTO) (*models.Quiz, error) {
 	}
 
 	if dto.QuizQuestions != nil {
+		if err := validateQuizQuestionPoints(*dto.QuizQuestions); err != nil {
+			return nil, err
+		}
+
 		b, err := json.Marshal(dto.QuizQuestions)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal quiz questions: %w", err)
@@ -296,6 +304,21 @@ func (s *QuizService) update(id string, dto UpdateDTO) (*models.Quiz, error) {
 	}
 
 	return &data, nil
+}
+
+func validateQuizQuestionPoints(questions []QuizQuestion) error {
+	const requiredTotal = 100
+
+	total := 0
+	for _, question := range questions {
+		total += question.Points
+	}
+
+	if total != requiredTotal {
+		return fmt.Errorf("total points for quiz questions must be exactly %d (currently %d)", requiredTotal, total)
+	}
+
+	return nil
 }
 
 func (s *QuizService) removeForUser(ctx *gin.Context, id string, permanent bool) (bool, error) {
