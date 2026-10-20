@@ -1,7 +1,6 @@
 package users
 
 import (
-	"bytes"
 	"clasenna-go-backend/libs/cryptography"
 	"clasenna-go-backend/libs/helpers"
 	"clasenna-go-backend/libs/models"
@@ -13,7 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"math/rand"
 	"net/http"
@@ -595,6 +593,8 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		"Context Code",
 		"Status *",
 		"Barcode (Pelajar)",
+		"Kode Grup Pembelajaran",
+		"Nama Grup Pembelajaran",
 	}
 
 	headerComments := map[string]string{
@@ -609,6 +609,8 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		"I1": "Opsional. Isi kode konteks yang terkait.",
 		"J1": "Wajib diisi. Pilih salah satu: Active atau Inactive",
 		"K1": "Opsional untuk Pelajar. Jika kosong, barcode akan dibuat otomatis. Barcode harus unik.",
+		"L1": "Opsional. Kode learning group. Spasi dan huruf besar/kecil diabaikan saat pencarian.",
+		"M1": "Opsional. Nama learning group; dipakai untuk pencarian atau membuat group baru jika kode dan nama belum ditemukan.",
 	}
 
 	headerStyle, err := f.NewStyle(&excelize.Style{
@@ -677,6 +679,8 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		"Opsional",
 		"Wajib: active/inactive",
 		"Opsional Pelajar; unik, kosong = otomatis",
+		"Opsional; dipakai untuk mencari grup pembelajaran",
+		"Opsional; dipakai untuk mencari/membuat grup pembelajaran",
 	}
 	guideStyle, err := f.NewStyle(&excelize.Style{Font: &excelize.Font{Italic: true, Color: "666666"}, Fill: excelize.Fill{Type: "pattern", Color: []string{"EDEDED"}, Pattern: 1}, Alignment: &excelize.Alignment{WrapText: true, Vertical: "center"}})
 	if err != nil {
@@ -710,6 +714,8 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		"I": 18,
 		"J": 18,
 		"K": 26,
+		"L": 28,
+		"M": 28,
 	}
 
 	for col, width := range colWidths {
@@ -905,6 +911,8 @@ func addGuideSheet(f *excelize.File) error {
 		{"Context Code", "Isi kode yang berhubungan dengan Context Type.", "0477093"},
 		{"Status *", "Wajib diisi. Pilih Active atau Inactive.", "Active"},
 		{"Barcode (Pelajar)", "Opsional untuk Pelajar. Jika kosong, barcode dibuat otomatis dan harus unik.", "STD-00001"},
+		{"Learning Group Code", "Opsional. Kode grup pemelajaran; huruf besar/kecil dan spasi diabaikan.", "KELAS-01"},
+		{"Learning Group Name", "Opsional. Nama grup pemelajaran; dipakai untuk pencarian atau membuat group baru.", "Kelas 1A"},
 	}
 
 	for i, row := range rows {
@@ -951,145 +959,6 @@ func addGuideSheet(f *excelize.File) error {
 	}
 
 	return nil
-}
-
-func (s *UserService) importUsersByExcel(ctx *gin.Context, file io.Reader) (int, []string, error) {
-	f, err := excelize.OpenReader(file)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	rows, err := f.GetRows("Users")
-	if err != nil {
-		return 0, nil, err
-	}
-	if len(rows) < 2 {
-		return 0, nil, errors.New("excel file has no data rows")
-	}
-
-	var inserted int
-	var rowErrors []string
-
-	for i := 1; i < len(rows); i++ {
-		r := rows[i]
-		get := func(idx int) string {
-			if idx >= len(r) {
-				return ""
-			}
-			return strings.TrimSpace(r[idx])
-		}
-
-		name := get(0)
-		email := get(1)
-		password := get(2)
-		roleName := get(3)
-		institutionCode := get(4)
-		phone := get(5)
-		pin := get(6)
-		contextType := get(7)
-		contextCode := get(8)
-		isActive := strings.ToLower(get(9))
-
-		if name == "" || email == "" || password == "" || roleName == "" || isActive == "" {
-			rowErrors = append(rowErrors, fmt.Sprintf("row %d: name,email,password,role_name,status wajib diisi", i+1))
-			continue
-		}
-		if isActive != string(models.UserStatusActive) && isActive != string(models.UserStatusInactive) {
-			rowErrors = append(rowErrors, fmt.Sprintf("row %d: status harus active atau inactive", i+1))
-			continue
-		}
-
-		var role models.Role
-		if err := s.DB.Where("LOWER(name) = LOWER(?)", roleName).First(&role).Error; err != nil {
-			rowErrors = append(rowErrors, fmt.Sprintf("row %d: role '%s' tidak ditemukan", i+1, roleName))
-			continue
-		}
-
-		var instID *uuid.UUID
-		if authenticatedID, scoped := authenticatedInstitutionID(ctx); scoped {
-			parsedID, err := uuid.Parse(authenticatedID)
-			if err != nil {
-				return inserted, rowErrors, errors.New("invalid authenticated institution")
-			}
-			instID = &parsedID
-		} else if institutionCode != "" {
-			var institution models.Institution
-			if err := s.DB.Where("LOWER(code) = LOWER(?)", institutionCode).First(&institution).Error; err != nil {
-				rowErrors = append(rowErrors, fmt.Sprintf("row %d: institution code '%s' tidak ditemukan", i+1, institutionCode))
-				continue
-			}
-			instID = &institution.ID
-		}
-
-		var exists int64
-		s.DB.Model(&models.User{}).Where("email = ?", email).Count(&exists)
-		if exists > 0 {
-			rowErrors = append(rowErrors, fmt.Sprintf("row %d: email '%s' sudah terpakai", i+1, email))
-			continue
-		}
-
-		rand.Seed(time.Now().UnixNano())
-		layerOne := rand.Perm(rand.Intn(6) + 3)
-		layerTwo := cryptography.GenerateRandomString(rand.Intn(25) + 12)
-		salt := cryptography.GenerateRandomString(rand.Intn(12) + 8)
-		encodedOne := cryptography.VigenereEncrypt(password, layerOne)
-		encodedTwo := cryptography.PolyalphabetEncrypt(encodedOne, layerTwo)
-		layerOneStr, err := json.Marshal(layerOne)
-		if err != nil {
-			rowErrors = append(rowErrors, fmt.Sprintf("row %d: gagal memproses password", i+1))
-			continue
-		}
-
-		userType := userTypeFromRoleName(roleName)
-		var barcodeValue, pinHash string
-		if userType == "student" {
-			if len(pin) < 4 || len(pin) > 8 || strings.Trim(pin, "0123456789") != "" {
-				rowErrors = append(rowErrors, fmt.Sprintf("row %d: PIN siswa harus 4 sampai 8 digit angka", i+1))
-				continue
-			}
-			barcodeValue, err = s.generateUniqueBarcode()
-			if err != nil {
-				rowErrors = append(rowErrors, fmt.Sprintf("row %d: gagal membuat barcode", i+1))
-				continue
-			}
-			hash, err := bcrypt.GenerateFromPassword([]byte(pin), bcrypt.DefaultCost)
-			if err != nil {
-				rowErrors = append(rowErrors, fmt.Sprintf("row %d: gagal memproses PIN", i+1))
-				continue
-			}
-			pinHash = string(hash)
-		}
-
-		data := models.User{
-			Name:          name,
-			Email:         email,
-			RoleID:        role.ID,
-			InstitutionID: instID,
-			Type:          userType,
-			Phone:         phone,
-			ContextType:   contextType,
-			ContextCode:   contextCode,
-			Status:        models.UserStatus(isActive),
-			Password:      encodedTwo,
-			LayerOne:      string(layerOneStr),
-			LayerTwo:      layerTwo,
-			Salt:          salt,
-			PinHash:       pinHash,
-			Barcode:       barcodeValue,
-		}
-
-		if err := s.DB.Create(&data).Error; err != nil {
-			rowErrors = append(rowErrors, fmt.Sprintf("row %d: %s", i+1, err.Error()))
-			continue
-		}
-		inserted++
-	}
-
-	return inserted, rowErrors, nil
-}
-
-func (s *UserService) importUsersByExcelFromBytes(b []byte) (int, []string, error) {
-	return s.importUsersByExcel(nil, bytes.NewReader(b))
 }
 
 func authenticatedInstitutionID(ctx *gin.Context) (string, bool) {

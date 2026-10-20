@@ -2,7 +2,6 @@ package users
 
 import (
 	"clasenna-go-backend/libs/helpers"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -167,32 +166,4 @@ func (c *UserController) DownloadTemplateExcel(ctx *gin.Context) {
 	ctx.Header("Content-Description", "File Transfer")
 	ctx.Header("Content-Disposition", "attachment; filename=users_template.xlsx")
 	ctx.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", data)
-}
-
-// @Summary      Import Users by Excel
-// @Tags         User API
-// @Param        file  formData  file  true  "Excel file (.xlsx)"
-// @Security     BearerAuth
-// @Router       /users/import-excel [post]
-func (c *UserController) ImportByExcel(ctx *gin.Context) {
-	file, _, err := ctx.Request.FormFile("file")
-	if err != nil {
-		helpers.RespondError(ctx, "users", http.StatusBadRequest, err)
-		return
-	}
-	defer file.Close()
-
-	inserted, rowErrors, err := c.Service.importUsersByExcel(ctx, file)
-	if err != nil {
-		helpers.RespondError(ctx, "users", http.StatusInternalServerError, err)
-		return
-	}
-
-	payload := gin.H{
-		"inserted": inserted,
-		"errors":   rowErrors,
-		"message":  fmt.Sprintf("%d users imported", inserted),
-	}
-
-	helpers.RespondSuccess(ctx, "users", http.StatusOK, payload)
 }

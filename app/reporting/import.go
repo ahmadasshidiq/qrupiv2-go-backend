@@ -187,6 +187,7 @@ func (s *ImportService) importRow(r []string, scopedInstitution string) error {
 	}
 	roleName, name, email, password := get(0), get(1), get(2), get(3)
 	institutionCode, phone, pin, contextType, contextCode, isActive, barcodeInput := get(4), get(5), get(6), get(7), get(8), strings.ToLower(get(9)), get(10)
+	learningGroupCode, learningGroupName := get(11), get(12)
 	if name == "" || roleName == "" || isActive == "" {
 		return errors.New("name,role_name,status wajib diisi")
 	}
@@ -270,7 +271,56 @@ func (s *ImportService) importRow(r []string, scopedInstitution string) error {
 			return fmt.Errorf("barcode '%s' sudah terpakai", barcode)
 		}
 	}
-	return s.DB.Create(&models.User{Name: name, Email: email, RoleID: role.ID, InstitutionID: inst, Type: userType, Phone: phone, ContextType: contextType, ContextCode: contextCode, Status: models.UserStatus(isActive), Password: p2, LayerOne: string(l1s), LayerTwo: l2, Salt: salt, PinHash: pinHash, Barcode: barcode}).Error
+	user := models.User{Name: name, Email: email, RoleID: role.ID, InstitutionID: inst, Type: userType, Phone: phone, ContextType: contextType, ContextCode: contextCode, Status: models.UserStatus(isActive), Password: p2, LayerOne: string(l1s), LayerTwo: l2, Salt: salt, PinHash: pinHash, Barcode: barcode}
+	if err := s.DB.Create(&user).Error; err != nil {
+		return err
+	}
+	if learningGroupCode != "" || learningGroupName != "" {
+		if inst == nil {
+			return errors.New("institution wajib diisi untuk learning group")
+		}
+		if err := s.addUserToLearningGroup(user.ID, *inst, learningGroupCode, learningGroupName, userType); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ImportService) addUserToLearningGroup(userID, institutionID uuid.UUID, code, name, userType string) error {
+	normalize := func(value string) string {
+		return strings.ToLower(strings.Join(strings.Fields(value), ""))
+	}
+	var group models.LearningGroup
+	if key := normalize(code); key != "" {
+		if err := s.DB.Where("institution_id = ? AND lower(replace(code, ' ', '')) = ?", institutionID, key).First(&group).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+	}
+	if group.ID == uuid.Nil {
+		if key := normalize(name); key != "" {
+			if err := s.DB.Where("institution_id = ? AND lower(replace(name, ' ', '')) = ?", institutionID, key).First(&group).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
+		}
+	}
+	if group.ID == uuid.Nil {
+		if strings.TrimSpace(name) == "" {
+			return errors.New("learning group tidak ditemukan; nama learning group wajib diisi untuk membuat group baru")
+		}
+		if strings.TrimSpace(code) == "" {
+			return errors.New("kode learning group wajib diisi untuk membuat group baru")
+		}
+		group = models.LearningGroup{InstitutionID: institutionID, Name: strings.TrimSpace(name), Code: strings.TrimSpace(code), Type: models.LearningGroupTypeSchoolClass, Level: 0, Status: models.LearningGroupStatusActive}
+		if err := s.DB.Create(&group).Error; err != nil {
+			return err
+		}
+	}
+	role := models.RoleInGroupStudent
+	if userType == "teacher" {
+		role = models.RoleInGroupInstructor
+	}
+	member := models.LearningGroupMember{LearningGroupID: group.ID, UserID: userID, RoleInGroup: role}
+	return s.DB.Where("learning_group_id = ? AND user_id = ?", group.ID, userID).FirstOrCreate(&member).Error
 }
 
 func (s *ImportService) resolveRole(input string) (models.Role, error) {
