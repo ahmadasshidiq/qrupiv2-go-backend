@@ -79,7 +79,7 @@ func (s *Aggregator) GetForRole(ctx context.Context, headers http.Header, query 
 		effectiveQuery.Set("scope", "school")
 	}
 	h := sha256.Sum256([]byte(role + "|" + headers.Get("X-User-ID") + "|" + headers.Get("X-Institution-ID") + "|" + effectiveQuery.Encode()))
-	key := "dashboard:v13:" + hex.EncodeToString(h[:])
+	key := "dashboard:v14:" + hex.EncodeToString(h[:])
 	if s.Cache != nil {
 		if b, err := s.Cache.Get(ctx, key).Bytes(); err == nil {
 			var r Response
@@ -126,6 +126,9 @@ func (s *Aggregator) GetForRole(ctx context.Context, headers http.Header, query 
 
 func dashboardData(role string, data map[string]any) map[string]any {
 	result := make(map[string]any)
+	if isStudentRole(role) {
+		result["attendance"] = attendanceSummary(data["attendance"])
+	}
 	for _, key := range []string{"positive_activity_chart", "violation_activity_chart"} {
 		if value, ok := data[key]; ok {
 			result[key] = value
@@ -146,6 +149,41 @@ func dashboardData(role string, data map[string]any) map[string]any {
 		result["students_need_attention"] = studentsNeedAttention(data["attendance"], data["quiz_sessions"])
 	}
 	return result
+}
+
+func attendanceSummary(value any) []any {
+	summary := make([]any, 0)
+	for _, row := range records(value) {
+		object, ok := row.(map[string]any)
+		if !ok {
+			continue
+		}
+		item := map[string]any{
+			"date":   object["occurred_at"],
+			"time":   object["check_in_at"],
+			"status": strings.ToLower(fmt.Sprint(object["status"])),
+		}
+		if item["time"] == nil || item["time"] == "" {
+			item["time"] = object["occurred_at"]
+		}
+		summary = append(summary, item)
+	}
+	sort.SliceStable(summary, func(i, j int) bool {
+		left := parseAttendanceTime(summary[i].(map[string]any)["date"])
+		right := parseAttendanceTime(summary[j].(map[string]any)["date"])
+		return left.After(right)
+	})
+	return summary
+}
+
+func parseAttendanceTime(value any) time.Time {
+	text := fmt.Sprint(value)
+	for _, layout := range []string{time.RFC3339, "2006-01-02 15:04:05", "2006-01-02"} {
+		if parsed, err := time.Parse(layout, text); err == nil {
+			return parsed
+		}
+	}
+	return time.Time{}
 }
 
 func instructorGroupSummary(groups, members, attendance, quizzes any) []any {
