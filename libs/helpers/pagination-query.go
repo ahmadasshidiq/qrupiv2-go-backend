@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -72,13 +73,19 @@ func BuildPaginatedQuery(
 		pageClause = ""
 	}
 
+	orderClause := fmt.Sprintf("%s %s", sortBy, sortOrder)
+	upperSortBy := strings.ToUpper(sortBy)
+	if strings.Contains(upperSortBy, " ASC") || strings.Contains(upperSortBy, " DESC") {
+		orderClause = sortBy
+	}
+
 	stmtQuery := fmt.Sprintf(`
 		select * from (
 		  %s
 		) as row_data
-		order by %s %s
+		order by %s
 		%s
-	`, stmtQueryBase, sortBy, sortOrder, pageClause)
+	`, stmtQueryBase, orderClause, pageClause)
 
 	stmtQueryCount := fmt.Sprintf(`
 		select count(*) as total_row from (

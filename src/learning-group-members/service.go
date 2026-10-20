@@ -56,13 +56,13 @@ func (s *LearningGroupMemberService) getAll(ctx *gin.Context, dto DefaultFindDTO
 
 	result, err := helpers.BuildPaginatedQuery(
 		ctx,
-		s.DB,                     // DB
-		params,                   // filter
-		"learning_group_members", // table name
-		baseQuery,                // optional base query
-		"",                       // optional query group by
-		"",                       // optional select fields
-		dto.SortBy,               // optional default sort
+		s.DB,                               // DB
+		params,                             // filter
+		"learning_group_members",           // table name
+		baseQuery,                          // optional base query
+		"",                                 // optional query group by
+		"",                                 // optional select fields
+		"role_in_group ASC, user_name ASC", // optional default sort
 	)
 
 	if err != nil {
@@ -165,7 +165,10 @@ func (s *LearningGroupMemberService) scopedDelete(ctx *gin.Context, id string) *
 	role := ""
 	s.DB.Table("roles").Select("lower(replace(name, '-', '_'))").Where("id = ?", ctx.GetString("role_id")).Scan(&role)
 	if !helpers.IsRole(role, "super_admin") {
-		query = query.Joins("JOIN learning_groups ON learning_groups.id = learning_group_members.learning_group_id").Where("learning_groups.institution_id = ?", ctx.GetString("institution_id"))
+		groupIDs := s.DB.Table("learning_groups").
+			Select("id").
+			Where("institution_id = ?", ctx.GetString("institution_id"))
+		query = query.Where("learning_group_members.learning_group_id IN (?)", groupIDs)
 	}
 	return query
 }
