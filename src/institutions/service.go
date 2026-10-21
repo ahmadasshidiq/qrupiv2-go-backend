@@ -140,6 +140,9 @@ func (s *InstitutionService) create(ctx *gin.Context, dto CreateDTO) (map[string
 		if err := createDefaultKAIHActivities(tx, institution.ID); err != nil {
 			return fmt.Errorf("failed to create default 7 KAIH activities: %w", err)
 		}
+		if err := createDefaultTataTertibActivities(tx, institution.ID); err != nil {
+			return fmt.Errorf("failed to create default Tata Tertib activities: %w", err)
+		}
 		if err := seeder.SeedAttendanceAbsenceReasonsForInstitution(tx, institution.ID); err != nil {
 			return fmt.Errorf("failed to create default attendance absence reasons: %w", err)
 		}
@@ -235,6 +238,61 @@ func defaultKAIHActivities(institutionID uuid.UUID) (models.ActivityCategory, []
 			PeriodLimit:   0,
 			PeriodType:    models.ActivityLimitNone,
 		}
+	}
+	return category, items
+}
+
+func createDefaultTataTertibActivities(tx *gorm.DB, institutionID uuid.UUID) error {
+	category, items := defaultTataTertibActivities(institutionID)
+	if err := tx.Create(&category).Error; err != nil {
+		return err
+	}
+	for index := range items {
+		items[index].CategoryID = &category.ID
+	}
+	return tx.Create(&items).Error
+}
+
+func defaultTataTertibActivities(institutionID uuid.UUID) (models.ActivityCategory, []models.ActivityItem) {
+	category := models.ActivityCategory{
+		InstitutionID: &institutionID,
+		Name:          "Tata Tertib",
+		Description:   "Pelanggaran tata tertib sekolah",
+	}
+	items := []models.ActivityItem{
+		{
+			InstitutionID: &institutionID,
+			Name:          "Lingkungan Dan Kebersihan",
+			Description:   "Membuang sampah sembarangan\nMencoret-coret dinding, meja, atau kursi\nMerusak fasilitas sekolah (bunga, tanaman, alat kelas)\nTidak melaksanakan piket kelas\nBerlari-lari di koridor atau bermain di tempat berbahaya",
+			Type:          models.ActivityItemTypeViolation,
+			PointValue:    1,
+			DailyLimit:    3,
+			PeriodLimit:   21,
+			PeriodType:    models.ActivityLimitMonthly,
+			IsSendNotif:   true,
+		},
+		{
+			InstitutionID: &institutionID,
+			Name:          "Disiplin",
+			Description:   "Terlambat datang ke sekolah\nTidak masuk tanpa keterangan (alpa) atau membolos\nKeluar kelas atau meninggalkan sekolah tanpa izin guru\nTidak mengikuti upacara bendera atau kegiatan wajib lainnya\nTidak mengerjakan atau tidak mengumpulkan tugas/PR",
+			Type:          models.ActivityItemTypeViolation,
+			PointValue:    1,
+			DailyLimit:    3,
+			PeriodLimit:   21,
+			PeriodType:    models.ActivityLimitMonthly,
+			IsSendNotif:   true,
+		},
+		{
+			InstitutionID: &institutionID,
+			Name:          "Kelengkapan Atribut",
+			Description:   "Seragam tidak lengkap atau tidak sesuai jadwal (tidak memakai topi, dasi, atau ikat pinggang saat upacara)\nMemakai sepatu atau kaus kaki yang tidak sesuai ketentuan\nRambut tidak rapi, kuku panjang dan kotor\nBaju tidak dimasukkan atau tidak dikancingkan dengan benar",
+			Type:          models.ActivityItemTypeViolation,
+			PointValue:    1,
+			DailyLimit:    4,
+			PeriodLimit:   21,
+			PeriodType:    models.ActivityLimitMonthly,
+			IsSendNotif:   true,
+		},
 	}
 	return category, items
 }
