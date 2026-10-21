@@ -1,10 +1,10 @@
 package export
 
 import (
+	"bytes"
 	"clasenna-go-backend/libs/barcodes"
 	"clasenna-go-backend/libs/models"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -41,36 +41,60 @@ func (s *ExportService) generateQRS(institutionID, learningGroupID string) (stri
 	if len(users) == 0 {
 		return "", errors.New("no users with QR data found")
 	}
+
+	const (
+		perPage  = 12
+		boxSize  = 60.0
+		gap      = 5.0
+		startX   = 10.0
+		startY   = 30.0
+		qrSize   = 48.0
+		nameBoxW = 54.0
+	)
+
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetTitle("QR Siswa", false)
+	pdf.SetAutoPageBreak(false, 0) // paginasi diatur manual, jangan biarkan gofpdf memecah halaman
+	tr := pdf.UnicodeTranslatorFromDescriptor("")
+
 	for i, user := range users {
-		if i%12 == 0 {
+		if i%perPage == 0 {
 			pdf.AddPage()
 			pdf.SetFont("Arial", "B", 13)
-			pdf.CellFormat(0, 7, institution.Name, "", 1, "C", false, 0, "")
+			pdf.SetXY(10, 10)
+			pdf.CellFormat(0, 7, tr(institution.Name), "", 1, "C", false, 0, "")
 			pdf.SetFont("Arial", "", 10)
-			pdf.CellFormat(0, 6, "Learning Group: "+learningGroupName, "", 1, "C", false, 0, "")
+			pdf.CellFormat(0, 6, tr("Learning Group: "+learningGroupName), "", 1, "C", false, 0, "")
 		}
-		position := i % 12
+
+		position := i % perPage
 		col, row := position%3, position/3
-		x, y := 10+float64(col)*65, 35+float64(row)*65
+		x := startX + float64(col)*(boxSize+gap)
+		y := startY + float64(row)*(boxSize+gap)
+
 		pdf.SetLineWidth(.4)
-		pdf.Rect(x, y, 60, 60, "D")
-		image, err := barcodes.QRPNG(user.Barcode, 180)
+		pdf.Rect(x, y, boxSize, boxSize, "D")
+
+		image, err := barcodes.QRPNG(user.Barcode, 512)
 		if err != nil {
 			return "", err
 		}
-		imagePath := filepath.Join(os.TempDir(), fmt.Sprintf("qr_%s.png", user.ID))
-		if err := os.WriteFile(imagePath, image, 0600); err != nil {
-			return "", err
+		imgName := "qr_" + user.ID.String() // sesuaikan kalau user.ID bertipe string: "qr_" + user.ID
+		pdf.RegisterImageOptionsReader(imgName, gofpdf.ImageOptions{ImageType: "PNG"}, bytes.NewReader(image))
+		pdf.ImageOptions(imgName, x+(boxSize-qrSize)/2, y+4, qrSize, qrSize, false, gofpdf.ImageOptions{ImageType: "PNG"}, 0, "")
+
+		// Nama: perkecil font jika terlalu panjang
+		name := tr(user.Name)
+		fontSize := 7.0
+		pdf.SetFont("Arial", "", fontSize)
+		for fontSize > 4 && pdf.GetStringWidth(name) > nameBoxW {
+			fontSize -= 0.5
+			pdf.SetFont("Arial", "", fontSize)
 		}
-		pdf.ImageOptions(imagePath, x+6, y+4, 48, 48, false, gofpdf.ImageOptions{ImageType: "PNG", ReadDpi: true}, 0, "")
-		_ = os.Remove(imagePath)
-		pdf.SetFont("Arial", "B", 10)
-		pdf.SetFont("Arial", "", 6)
-		pdf.SetXY(x+3, y+53)
-		pdf.CellFormat(54, 4, user.Name, "", 0, "C", false, 0, "")
+		pdf.SetXY(x+(boxSize-nameBoxW)/2, y+boxSize-6)
+		pdf.CellFormat(nameBoxW, 4, name, "", 0, "C", false, 0, "")
 	}
+
 	path := filepath.Join(os.TempDir(), "student-qrs_"+time.Now().Format("20060102150405")+".pdf")
 	if err := pdf.OutputFileAndClose(path); err != nil {
 		return "", err
