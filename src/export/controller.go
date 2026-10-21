@@ -12,6 +12,19 @@ type ExportController struct {
 	service *ExportService
 }
 
+func (c *ExportController) ExportQRS(ctx *gin.Context) {
+	if ctx.GetString("institution_id") == "" {
+		helpers.RespondError(ctx, "export", http.StatusForbidden, errors.New("institution scope is required"))
+		return
+	}
+	path, err := c.service.generateQRS(ctx.GetString("institution_id"), ctx.Query("learning_group_id"))
+	if err != nil {
+		helpers.RespondError(ctx, "export", http.StatusBadRequest, err)
+		return
+	}
+	ctx.FileAttachment(path, "student-qrs.pdf")
+}
+
 func NewExportController(service *ExportService) *ExportController {
 	return &ExportController{service}
 }

@@ -60,6 +60,15 @@ func (s *UserService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 	if err := helpers.ApplyRegionScope(ctx, params, "i"); err != nil {
 		return nil, err
 	}
+	baseJoin := ""
+	if rawGroupID := ctx.Query("learning_group_id"); rawGroupID != "" {
+		groupID, err := uuid.Parse(rawGroupID)
+		if err != nil {
+			return nil, errors.New("invalid learning_group_id format")
+		}
+		delete(params, "learning_group_id")
+		baseJoin = fmt.Sprintf("join learning_group_members lgm on lgm.user_id = u.id and lgm.learning_group_id = '%s' and lgm.deleted_at is null", groupID.String())
+	}
 
 	baseQuery := `
 		select 
@@ -82,7 +91,9 @@ func (s *UserService) getAll(ctx *gin.Context, dto DefaultFindDTO) (*helpers.Pag
 		from users u
 		join roles r on r.id = u.role_id
 		left join institutions i on i.id = u.institution_id
+		%s
 	`
+	baseQuery = fmt.Sprintf(baseQuery, baseJoin)
 
 	result, err := helpers.BuildPaginatedQuery(
 		ctx,

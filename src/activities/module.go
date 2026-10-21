@@ -16,6 +16,7 @@ func RegisterActivityModule(router *gin.RouterGroup, db *gorm.DB) {
 	g.GET("/limits", p.Handler("activities", "get-all"), c.GetLimitStatuses)
 	g.GET("/limits/bulk", p.Handler("activities", "get-all"), c.GetBulkLimitStatuses)
 	g.GET("/chart", p.Handler("activities", "get-all"), c.GetChart)
+	g.GET("/kaih-dashboard", p.Handler("activities", "get-all"), c.GetKAIHDashboard)
 	g.GET("/:id", p.Handler("activities", "get-by-id"), c.GetByID)
 	g.POST("/bulk", p.Handler("activities", "create"), c.CreateBulk)
 	g.POST("", p.Handler("activities", "create"), c.Create)

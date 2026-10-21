@@ -14,4 +14,5 @@ func RegisterExportModule(router *gin.RouterGroup, db *gorm.DB) {
 	group := router.Group("/export")
 	group.Use(cryptography.JWTMiddleware(db))
 	group.POST("/excel", controller.ExportExcel)
+	group.GET("/qrs/pdf", controller.ExportQRS)
 }

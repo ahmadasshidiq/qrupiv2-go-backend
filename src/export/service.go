@@ -1,6 +1,7 @@
 package export
 
 import (
+	"clasenna-go-backend/libs/barcodes"
 	"clasenna-go-backend/libs/helpers"
 	"fmt"
 	"path/filepath"
@@ -201,15 +202,53 @@ func (s *ExportService) generateExcel(dto ExportDTO, data []map[string]interface
 
 	for i, col := range dto.Columns {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 2)
-		f.SetCellValue(sheet, cell, col.Label)
+		header := col.Label
+		if dto.Models == "users" && strings.EqualFold(col.Key, "barcode") {
+			header = "QR"
+		}
+		f.SetCellValue(sheet, cell, header)
 		f.SetCellStyle(sheet, cell, cell, headerStyle)
 	}
+
+	const rowHeightPt = 110.0
+	const qrSizePx = 180.0
+	rowHeightPx := rowHeightPt * 96 / 72
+	targetPx := rowHeightPx - 20
+	scale := targetPx / qrSizePx
+
+	f.SetColWidth(sheet, "G", "G", 22)
 
 	for r, row := range data {
 		for c, col := range dto.Columns {
 			cell, _ := excelize.CoordinatesToCellName(c+1, r+3)
 			val := row[col.Label]
-			f.SetCellValue(sheet, cell, val)
+			isQR := dto.Models == "users" && strings.EqualFold(col.Key, "barcode")
+
+			if !isQR {
+				f.SetCellValue(sheet, cell, val)
+			}
+
+			if isQR {
+				if value := fmt.Sprint(val); value != "" && value != "<nil>" {
+					_ = f.SetRowHeight(sheet, r+3, rowHeightPt)
+					if image, err := barcodes.QRPNG(value, int(qrSizePx)); err == nil {
+						_ = f.AddPictureFromBytes(sheet, cell, &excelize.Picture{
+							Extension: ".png",
+							File:      image,
+							Format: &excelize.GraphicOptions{
+								AltText:         value,
+								AutoFit:         false,
+								ScaleX:          scale,
+								ScaleY:          scale,
+								OffsetX:         10,
+								OffsetY:         10,
+								LockAspectRatio: true,
+								Positioning:     "oneCell",
+							},
+						})
+					}
+				}
+			}
 
 			if r%2 == 1 {
 				f.SetCellStyle(sheet, cell, cell, altRowStyle)
@@ -217,9 +256,13 @@ func (s *ExportService) generateExcel(dto ExportDTO, data []map[string]interface
 		}
 	}
 
-	for i := range dto.Columns {
+	for i, col := range dto.Columns {
 		colLetter, _ := excelize.ColumnNumberToName(i + 1)
-		f.SetColWidth(sheet, colLetter, colLetter, 20)
+		width := 20.0
+		if dto.Models == "users" && strings.EqualFold(col.Key, "barcode") {
+			width = 20
+		}
+		f.SetColWidth(sheet, colLetter, colLetter, width)
 	}
 
 	_ = f.SetPanes(sheet, &excelize.Panes{
