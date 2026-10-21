@@ -44,15 +44,16 @@ func (s *ExportService) generateQRS(institutionID, learningGroupID string) (stri
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetTitle("QR Siswa", false)
 	for i, user := range users {
-		if i%3 == 0 {
+		if i%12 == 0 {
 			pdf.AddPage()
 			pdf.SetFont("Arial", "B", 13)
 			pdf.CellFormat(0, 7, institution.Name, "", 1, "C", false, 0, "")
 			pdf.SetFont("Arial", "", 10)
 			pdf.CellFormat(0, 6, "Learning Group: "+learningGroupName, "", 1, "C", false, 0, "")
 		}
-		col := i % 3
-		x, y := 10+float64(col)*65, 35.0
+		position := i % 12
+		col, row := position%3, position/3
+		x, y := 10+float64(col)*65, 35+float64(row)*65
 		pdf.SetLineWidth(.4)
 		pdf.Rect(x, y, 60, 60, "D")
 		image, err := barcodes.QRPNG(user.Barcode, 180)
