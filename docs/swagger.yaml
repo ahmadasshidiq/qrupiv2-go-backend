@@ -308,6 +308,54 @@ definitions:
     - type
     - user_id
     type: object
+  attendance_logs.QRCheckInDTO:
+    properties:
+      learning_group_id:
+        type: string
+      location_lat:
+        type: number
+      location_long:
+        type: number
+      occurred_at:
+        type: string
+      qr_code:
+        maxLength: 1024
+        type: string
+      requires_check_out:
+        type: boolean
+      status:
+        enum:
+        - on_time
+        - late
+        type: string
+    required:
+    - learning_group_id
+    - qr_code
+    type: object
+  attendance_logs.RFIDCheckInDTO:
+    properties:
+      learning_group_id:
+        type: string
+      location_lat:
+        type: number
+      location_long:
+        type: number
+      occurred_at:
+        type: string
+      requires_check_out:
+        type: boolean
+      rfid_card_code:
+        maxLength: 255
+        type: string
+      status:
+        enum:
+        - on_time
+        - late
+        type: string
+    required:
+    - learning_group_id
+    - rfid_card_code
+    type: object
   attendance_logs.UpdateDTO:
     properties:
       absence_note:
@@ -1419,6 +1467,43 @@ paths:
       summary: Create Attendance Logs in bulk
       tags:
       - Attendance Log API
+  /attendance-logs/chart:
+    get:
+      parameters:
+      - description: Attendance type
+        enum:
+        - student
+        - teacher
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: Start date
+        format: date
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date
+        format: date
+        in: query
+        name: end_date
+        required: true
+        type: string
+      - description: Learning group ID
+        in: query
+        name: learning_group_id
+        type: string
+      - description: User ID
+        in: query
+        name: user_id
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Get Attendance Log Chart
+      tags:
+      - Attendance Log API
   /attendance-logs/check-in:
     post:
       parameters:
@@ -1432,6 +1517,36 @@ paths:
       security:
       - BearerAuth: []
       summary: Check in Attendance
+      tags:
+      - Attendance Log API
+  /attendance-logs/qr/check-in:
+    post:
+      parameters:
+      - description: QR Attendance Check-in Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/attendance_logs.QRCheckInDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Check in Attendance by scanning student QR code
+      tags:
+      - Attendance Log API
+  /attendance-logs/rfid/check-in:
+    post:
+      parameters:
+      - description: RFID Attendance Check-in Data
+        in: body
+        name: dto
+        required: true
+        schema:
+          $ref: '#/definitions/attendance_logs.RFIDCheckInDTO'
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Check in Attendance using RFID card
       tags:
       - Attendance Log API
   /auth/login:
@@ -2675,6 +2790,12 @@ paths:
         name: institution_id
         type: string
       - in: formData
+        name: latitude
+        type: number
+      - in: formData
+        name: longitude
+        type: number
+      - in: formData
         maxLength: 255
         minLength: 2
         name: name
@@ -2692,6 +2813,10 @@ paths:
         maxLength: 8
         minLength: 4
         name: pin
+        type: string
+      - in: formData
+        maxLength: 255
+        name: rfid_card_code
         type: string
       - in: formData
         name: role_id
@@ -2774,6 +2899,12 @@ paths:
         name: institution_id
         type: string
       - in: formData
+        name: latitude
+        type: number
+      - in: formData
+        name: longitude
+        type: number
+      - in: formData
         maxLength: 255
         minLength: 2
         name: name
@@ -2790,6 +2921,10 @@ paths:
         maxLength: 8
         minLength: 4
         name: pin
+        type: string
+      - in: formData
+        maxLength: 255
+        name: rfid_card_code
         type: string
       - in: formData
         name: role_id
@@ -2850,20 +2985,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Get student QR code data
-      tags:
-      - User API
-  /users/import-excel:
-    post:
-      parameters:
-      - description: Excel file (.xlsx)
-        in: formData
-        name: file
-        required: true
-        type: file
-      responses: {}
-      security:
-      - BearerAuth: []
-      summary: Import Users by Excel
       tags:
       - User API
   /users/template-excel:

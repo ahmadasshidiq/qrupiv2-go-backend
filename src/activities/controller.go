@@ -123,6 +123,44 @@ func (c *ActivityController) Create(x *gin.Context) {
 	helpers.RespondSuccess(x, "activities", 201, v.ID)
 }
 
+// @Summary      Create Activity by scanning student QR code
+// @Tags         Activity API
+// @Param        dto  body  QRScanDTO  true  "QR Activity Scan Data"
+// @Security     BearerAuth
+// @Router       /activities/qr/scan [post]
+func (c *ActivityController) QRScan(x *gin.Context) {
+	var d QRScanDTO
+	if e := x.ShouldBindJSON(&d); e != nil {
+		helpers.RespondError(x, "activities", 400, e)
+		return
+	}
+	v, e := c.Service.qrScan(x, d)
+	if e != nil {
+		helpers.RespondError(x, "activities", 400, e)
+		return
+	}
+	helpers.RespondSuccess(x, "activities", 201, v)
+}
+
+// @Summary      Create Activity using RFID card
+// @Tags         Activity API
+// @Param        dto  body  RFIDScanDTO  true  "RFID Activity Scan Data"
+// @Security     BearerAuth
+// @Router       /activities/rfid/scan [post]
+func (c *ActivityController) RFIDScan(x *gin.Context) {
+	var d RFIDScanDTO
+	if e := x.ShouldBindJSON(&d); e != nil {
+		helpers.RespondError(x, "activities", 400, e)
+		return
+	}
+	v, e := c.Service.rfidScan(x, d)
+	if e != nil {
+		helpers.RespondError(x, "activities", 400, e)
+		return
+	}
+	helpers.RespondSuccess(x, "activities", 201, v)
+}
+
 // @Summary      Create Activities in bulk
 // @Description  Creates up to 200 activities directly; larger requests up to 10,000 are queued and return a job ID
 // @Tags         Activity API

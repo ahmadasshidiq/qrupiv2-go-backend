@@ -870,6 +870,61 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+        "/attendance-logs/chart": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Attendance Log API"
+                ],
+                "summary": "Get Attendance Log Chart",
+                "parameters": [
+                    {
+                        "enum": [
+                            "student",
+                            "teacher"
+                        ],
+                        "type": "string",
+                        "description": "Attendance type",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Start date",
+                        "name": "start_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "date",
+                        "description": "End date",
+                        "name": "end_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Learning group ID",
+                        "name": "learning_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/attendance-logs/check-in": {
             "post": {
                 "security": [
@@ -889,6 +944,56 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/attendance_logs.CheckInDTO"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/attendance-logs/qr/check-in": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Attendance Log API"
+                ],
+                "summary": "Check in Attendance by scanning student QR code",
+                "parameters": [
+                    {
+                        "description": "QR Attendance Check-in Data",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/attendance_logs.QRCheckInDTO"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/attendance-logs/rfid/check-in": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Attendance Log API"
+                ],
+                "summary": "Check in Attendance using RFID card",
+                "parameters": [
+                    {
+                        "description": "RFID Attendance Check-in Data",
+                        "name": "dto",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/attendance_logs.RFIDCheckInDTO"
                         }
                     }
                 ],
@@ -2988,6 +3093,16 @@ const docTemplate = `{
                         "in": "formData"
                     },
                     {
+                        "type": "number",
+                        "name": "latitude",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "number",
+                        "name": "longitude",
+                        "in": "formData"
+                    },
+                    {
                         "maxLength": 255,
                         "minLength": 2,
                         "type": "string",
@@ -3012,6 +3127,12 @@ const docTemplate = `{
                         "minLength": 4,
                         "type": "string",
                         "name": "pin",
+                        "in": "formData"
+                    },
+                    {
+                        "maxLength": 255,
+                        "type": "string",
+                        "name": "rfid_card_code",
                         "in": "formData"
                     },
                     {
@@ -3046,29 +3167,6 @@ const docTemplate = `{
                         "description": "Upload File (optional)",
                         "name": "file",
                         "in": "formData"
-                    }
-                ],
-                "responses": {}
-            }
-        },
-        "/users/import-excel": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "tags": [
-                    "User API"
-                ],
-                "summary": "Import Users by Excel",
-                "parameters": [
-                    {
-                        "type": "file",
-                        "description": "Excel file (.xlsx)",
-                        "name": "file",
-                        "in": "formData",
-                        "required": true
                     }
                 ],
                 "responses": {}
@@ -3151,6 +3249,16 @@ const docTemplate = `{
                         "in": "formData"
                     },
                     {
+                        "type": "number",
+                        "name": "latitude",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "number",
+                        "name": "longitude",
+                        "in": "formData"
+                    },
+                    {
                         "maxLength": 255,
                         "minLength": 2,
                         "type": "string",
@@ -3174,6 +3282,12 @@ const docTemplate = `{
                         "minLength": 4,
                         "type": "string",
                         "name": "pin",
+                        "in": "formData"
+                    },
+                    {
+                        "maxLength": 255,
+                        "type": "string",
+                        "name": "rfid_card_code",
                         "in": "formData"
                     },
                     {
@@ -3810,6 +3924,76 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "attendance_logs.QRCheckInDTO": {
+            "type": "object",
+            "required": [
+                "learning_group_id",
+                "qr_code"
+            ],
+            "properties": {
+                "learning_group_id": {
+                    "type": "string"
+                },
+                "location_lat": {
+                    "type": "number"
+                },
+                "location_long": {
+                    "type": "number"
+                },
+                "occurred_at": {
+                    "type": "string"
+                },
+                "qr_code": {
+                    "type": "string",
+                    "maxLength": 1024
+                },
+                "requires_check_out": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "on_time",
+                        "late"
+                    ]
+                }
+            }
+        },
+        "attendance_logs.RFIDCheckInDTO": {
+            "type": "object",
+            "required": [
+                "learning_group_id",
+                "rfid_card_code"
+            ],
+            "properties": {
+                "learning_group_id": {
+                    "type": "string"
+                },
+                "location_lat": {
+                    "type": "number"
+                },
+                "location_long": {
+                    "type": "number"
+                },
+                "occurred_at": {
+                    "type": "string"
+                },
+                "requires_check_out": {
+                    "type": "boolean"
+                },
+                "rfid_card_code": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "on_time",
+                        "late"
+                    ]
                 }
             }
         },

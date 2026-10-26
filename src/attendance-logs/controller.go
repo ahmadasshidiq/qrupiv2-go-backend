@@ -2,6 +2,7 @@ package attendance_logs
 
 import (
 	"clasenna-go-backend/libs/helpers"
+	"clasenna-go-backend/libs/models"
 	"errors"
 	"net/http"
 
@@ -151,15 +152,42 @@ func (c *AttendanceLogController) RFIDCheckIn(ctx *gin.Context) {
 		helpers.RespondError(ctx, "attendance-logs", http.StatusBadRequest, err)
 		return
 	}
-	data, err := c.Service.rfidCheckIn(ctx, dto)
+	data, student, err := c.Service.rfidCheckIn(ctx, dto)
 	if err != nil {
 		helpers.RespondError(ctx, "attendance-logs", http.StatusBadRequest, err)
 		return
 	}
-	helpers.RespondSuccess(ctx, "attendance-logs", http.StatusCreated, gin.H{
-		"id":      data.ID,
-		"user_id": data.UserID,
-	})
+	helpers.RespondSuccess(ctx, "attendance-logs", http.StatusCreated, scanCheckInResponse(data, student))
+}
+
+// @Summary Check in Attendance by scanning student QR code
+// @Tags Attendance Log API
+// @Param dto body QRCheckInDTO true "QR Attendance Check-in Data"
+// @Security BearerAuth
+// @Router /attendance-logs/qr/check-in [post]
+func (c *AttendanceLogController) QRCheckIn(ctx *gin.Context) {
+	var dto QRCheckInDTO
+	if err := ctx.ShouldBindJSON(&dto); err != nil {
+		helpers.RespondError(ctx, "attendance-logs", http.StatusBadRequest, err)
+		return
+	}
+	data, student, err := c.Service.qrCheckIn(ctx, dto)
+	if err != nil {
+		helpers.RespondError(ctx, "attendance-logs", http.StatusBadRequest, err)
+		return
+	}
+	helpers.RespondSuccess(ctx, "attendance-logs", http.StatusCreated, scanCheckInResponse(data, student))
+}
+
+func scanCheckInResponse(data *models.AttendanceLog, student *models.User) gin.H {
+	return gin.H{
+		"id":                 data.ID,
+		"user_id":            data.UserID,
+		"name":               student.Name,
+		"avatar_profile_url": student.AvatarURL,
+		"status":             data.Status,
+		"check_in_at":        data.CheckInAt,
+	}
 }
 
 // @Summary Check out Attendance

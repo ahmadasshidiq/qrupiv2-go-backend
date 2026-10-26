@@ -84,6 +84,16 @@ type RFIDCheckInDTO struct {
 	LocationLong     *float64   `json:"location_long" binding:"omitempty,longitude"`
 }
 
+type QRCheckInDTO struct {
+	QRCode           string     `json:"qr_code" binding:"required,max=1024"`
+	LearningGroupID  string     `json:"learning_group_id" binding:"required,uuid"`
+	Status           string     `json:"status" binding:"omitempty,oneof=on_time late"`
+	OccurredAt       *time.Time `json:"occurred_at"`
+	RequiresCheckOut bool       `json:"requires_check_out"`
+	LocationLat      *float64   `json:"location_lat" binding:"omitempty,latitude"`
+	LocationLong     *float64   `json:"location_long" binding:"omitempty,longitude"`
+}
+
 type CheckOutDTO struct {
 	CheckOutAt   *time.Time `json:"check_out_at"`
 	LocationLat  *float64   `json:"location_lat" binding:"omitempty,latitude"`

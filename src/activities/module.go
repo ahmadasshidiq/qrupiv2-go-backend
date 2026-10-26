@@ -18,6 +18,8 @@ func RegisterActivityModule(router *gin.RouterGroup, db *gorm.DB) {
 	g.GET("/chart", p.Handler("activities", "get-all"), c.GetChart)
 	g.GET("/kaih-dashboard", p.Handler("activities", "get-all"), c.GetKAIHDashboard)
 	g.GET("/:id", p.Handler("activities", "get-by-id"), c.GetByID)
+	g.POST("/qr/scan", p.Handler("activities", "create"), c.QRScan)
+	g.POST("/rfid/scan", p.Handler("activities", "create"), c.RFIDScan)
 	g.POST("/bulk", p.Handler("activities", "create"), c.CreateBulk)
 	g.POST("", p.Handler("activities", "create"), c.Create)
 	g.PUT("/:id", p.Handler("activities", "update"), c.Update)

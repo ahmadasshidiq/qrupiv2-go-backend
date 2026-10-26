@@ -180,18 +180,54 @@ func (s *AttendanceLogService) checkIn(ctx *gin.Context, dto CheckInDTO) (*model
 	})
 }
 
-func (s *AttendanceLogService) rfidCheckIn(ctx *gin.Context, dto RFIDCheckInDTO) (*models.AttendanceLog, error) {
+func (s *AttendanceLogService) rfidCheckIn(ctx *gin.Context, dto RFIDCheckInDTO) (*models.AttendanceLog, *models.User, error) {
+	cardCode := strings.TrimSpace(dto.RFIDCardCode)
+	if cardCode == "" {
+		return nil, nil, errors.New("rfid_card_code is required")
+	}
+	return s.scanCheckIn(ctx, scanCheckInInput{
+		LearningGroupID: dto.LearningGroupID, Status: dto.Status, OccurredAt: dto.OccurredAt,
+		RequiresCheckOut: dto.RequiresCheckOut, LocationLat: dto.LocationLat, LocationLong: dto.LocationLong,
+	}, func(q *gorm.DB) *gorm.DB {
+		return q.Where("users.rfid_card_code = ?", cardCode)
+	}, "active student with this rfid card was not found")
+}
+
+func (s *AttendanceLogService) qrCheckIn(ctx *gin.Context, dto QRCheckInDTO) (*models.AttendanceLog, *models.User, error) {
+	qr, err := helpers.ParseStudentQR(dto.QRCode)
+	if err != nil {
+		return nil, nil, err
+	}
+	return s.scanCheckIn(ctx, scanCheckInInput{
+		LearningGroupID: dto.LearningGroupID, Status: dto.Status, OccurredAt: dto.OccurredAt,
+		RequiresCheckOut: dto.RequiresCheckOut, LocationLat: dto.LocationLat, LocationLong: dto.LocationLong,
+	}, func(q *gorm.DB) *gorm.DB {
+		q = q.Where("users.barcode = ?", qr.Barcode)
+		if qr.InstitutionCode != "" {
+			q = q.Joins("JOIN institutions ON institutions.id = users.institution_id").Where("LOWER(institutions.code) = LOWER(?)", qr.InstitutionCode)
+		}
+		return q
+	}, "active student with this QR code was not found")
+}
+
+type scanCheckInInput struct {
+	LearningGroupID  string
+	Status           string
+	OccurredAt       *time.Time
+	RequiresCheckOut bool
+	LocationLat      *float64
+	LocationLong     *float64
+}
+
+// scanCheckIn checks in a scanned student (RFID card / QR code) into a learning group taught by the authenticated instructor.
+func (s *AttendanceLogService) scanCheckIn(ctx *gin.Context, dto scanCheckInInput, findStudent func(*gorm.DB) *gorm.DB, notFoundMessage string) (*models.AttendanceLog, *models.User, error) {
 	teacherID, err := uuid.Parse(ctx.GetString("user_id"))
 	if err != nil {
-		return nil, errors.New("authenticated user_id is required")
+		return nil, nil, errors.New("authenticated user_id is required")
 	}
 	groupID, err := uuid.Parse(dto.LearningGroupID)
 	if err != nil {
-		return nil, errors.New("invalid learning_group_id format")
-	}
-	cardCode := strings.TrimSpace(dto.RFIDCardCode)
-	if cardCode == "" {
-		return nil, errors.New("rfid_card_code is required")
+		return nil, nil, errors.New("invalid learning_group_id format")
 	}
 
 	// The authenticated teacher must be an instructor in this group.
@@ -203,30 +239,30 @@ func (s *AttendanceLogService) rfidCheckIn(ctx *gin.Context, dto RFIDCheckInDTO)
 		instructorQuery = instructorQuery.Where("learning_groups.institution_id = ?", institutionID)
 	}
 	if err := instructorQuery.Count(&instructorCount).Error; err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if instructorCount == 0 {
-		return nil, errors.New("authenticated user is not an instructor of the learning group")
+		return nil, nil, errors.New("authenticated user is not an instructor of the learning group")
 	}
 
 	var student models.User
-	studentQuery := s.DB.Where("users.rfid_card_code = ? AND users.type = ? AND users.status = ?", cardCode, "student", models.UserStatusActive)
+	studentQuery := findStudent(s.DB.Model(&models.User{})).Where("users.type = ? AND users.status = ?", "student", models.UserStatusActive)
 	if institutionID := ctx.GetString("institution_id"); institutionID != "" {
 		studentQuery = studentQuery.Where("users.institution_id = ?", institutionID)
 	}
-	if err := studentQuery.First(&student).Error; err != nil {
+	if err := studentQuery.Select("users.*").First(&student).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("active student with this rfid card was not found")
+			return nil, nil, errors.New(notFoundMessage)
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
 	var studentCount int64
 	if err := s.DB.Model(&models.LearningGroupMember{}).Where("learning_group_id = ? AND user_id = ? AND role_in_group = ? AND deleted_at IS NULL", groupID, student.ID, models.RoleInGroupStudent).Count(&studentCount).Error; err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if studentCount == 0 {
-		return nil, errors.New("student is not a member of the learning group")
+		return nil, nil, errors.New("student is not a member of the learning group")
 	}
 
 	occurredAt := time.Now()
@@ -237,11 +273,15 @@ func (s *AttendanceLogService) rfidCheckIn(ctx *gin.Context, dto RFIDCheckInDTO)
 	if status == "" {
 		status = string(models.AttendanceStatusOnTime)
 	}
-	return s.checkIn(ctx, CheckInDTO{
+	data, err := s.checkIn(ctx, CheckInDTO{
 		UserID: student.ID.String(), LearningGroupID: groupID.String(), Type: string(models.AttendanceTypeStudent),
 		Status: status, RequiresCheckOut: dto.RequiresCheckOut, OccurredAt: occurredAt,
 		CheckInAt: &occurredAt, LocationLat: dto.LocationLat, LocationLong: dto.LocationLong,
 	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return data, &student, nil
 }
 
 func (s *AttendanceLogService) checkOut(ctx *gin.Context, id string, dto CheckOutDTO) (*models.AttendanceLog, error) {

@@ -97,3 +97,34 @@ type BulkJobResult struct {
 	EstimatedCompletionMinutes int                          `json:"estimated_completion_minutes"`
 	RetryAfterSeconds          int                          `json:"retry_after_seconds"`
 }
+
+type QRScanDTO struct {
+	QRCode          string     `json:"qr_code" binding:"required,max=1024"`
+	ActivityItemID  string     `json:"activity_item_id" binding:"required,uuid"`
+	LearningGroupID string     `json:"learning_group_id" binding:"omitempty,uuid"`
+	Description     string     `json:"description" binding:"omitempty"`
+	Platform        string     `json:"platform" binding:"omitempty,max=50"`
+	OccurredAt      *time.Time `json:"occurred_at"`
+}
+
+type RFIDScanDTO struct {
+	RFIDCardCode    string     `json:"rfid_card_code" binding:"required,max=255"`
+	ActivityItemID  string     `json:"activity_item_id" binding:"required,uuid"`
+	LearningGroupID string     `json:"learning_group_id" binding:"omitempty,uuid"`
+	Description     string     `json:"description" binding:"omitempty"`
+	Platform        string     `json:"platform" binding:"omitempty,max=50"`
+	OccurredAt      *time.Time `json:"occurred_at"`
+}
+
+type ScanResult struct {
+	ID               uuid.UUID  `json:"id"`
+	UserID           uuid.UUID  `json:"user_id"`
+	Name             string     `json:"name"`
+	AvatarProfileURL string     `json:"avatar_profile_url"`
+	ActivityItemID   uuid.UUID  `json:"activity_item_id"`
+	ActivityItemName string     `json:"activity_item_name"`
+	Type             string     `json:"type"`
+	PointValue       int        `json:"point_value"`
+	LearningGroupID  *uuid.UUID `json:"learning_group_id"`
+	OccurredAt       time.Time  `json:"occurred_at"`
+}

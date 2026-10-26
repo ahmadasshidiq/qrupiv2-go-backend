@@ -87,7 +87,7 @@ func (s *AuthService) Register(ctx context.Context, dto RegisterDTO, correlation
 }
 
 func (s *AuthService) StudentScanLogin(ctx context.Context, dto StudentScanLoginDTO, correlationID string) (map[string]interface{}, error) {
-	qr, err := parseStudentQR(dto.QRCode)
+	qr, err := helpers.ParseStudentQR(dto.QRCode)
 	if err != nil {
 		return nil, err
 	}
@@ -104,24 +104,8 @@ func (s *AuthService) StudentScanLogin(ctx context.Context, dto StudentScanLogin
 	return map[string]interface{}{"student_id": data.ID, "name": data.Name, "avatar_profile_url": data.AvatarURL, "requires_pin": true}, nil
 }
 
-type studentQR struct {
-	InstitutionCode string `json:"institution_code"`
-	Barcode         string `json:"barcode"`
-}
-
-func parseStudentQR(value string) (studentQR, error) {
-	var qr studentQR
-	if err := json.Unmarshal([]byte(value), &qr); err == nil && qr.Barcode != "" {
-		return qr, nil
-	}
-	if value != "" {
-		return studentQR{Barcode: value}, nil
-	}
-	return qr, errors.New("invalid QR code")
-}
-
 func (s *AuthService) StudentVerifyPin(ctx context.Context, dto StudentVerifyPinDTO, correlationID string) (map[string]interface{}, error) {
-	qr, err := parseStudentQR(dto.QRCode)
+	qr, err := helpers.ParseStudentQR(dto.QRCode)
 	if err != nil {
 		return nil, err
 	}

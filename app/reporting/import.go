@@ -187,7 +187,7 @@ func (s *ImportService) importRow(r []string, scopedInstitution string) error {
 	}
 	roleName, name, email, password := get(0), get(1), get(2), get(3)
 	institutionCode, phone, pin, contextType, contextCode, isActive, barcodeInput := get(4), get(5), get(6), get(7), get(8), strings.ToLower(get(9)), get(10)
-	learningGroupCode, learningGroupName := get(11), get(12)
+	learningGroupCode, learningGroupName, rfidCardCode := get(11), get(12), get(13)
 	if name == "" || roleName == "" || isActive == "" {
 		return errors.New("name,role_name,status wajib diisi")
 	}
@@ -241,6 +241,13 @@ func (s *ImportService) importRow(r []string, scopedInstitution string) error {
 			return fmt.Errorf("context code '%s' sudah terpakai", contextCode)
 		}
 	}
+	if rfidCardCode != "" {
+		var rfidCount int64
+		s.DB.Model(&models.User{}).Where("rfid_card_code = ?", rfidCardCode).Count(&rfidCount)
+		if rfidCount > 0 {
+			return fmt.Errorf("kode RFID '%s' sudah terpakai", rfidCardCode)
+		}
+	}
 	if userType == "student" && (len(pin) != 6 || strings.Trim(pin, "0123456789") != "") {
 		return errors.New("PIN siswa harus tepat 6 digit angka")
 	}
@@ -271,7 +278,7 @@ func (s *ImportService) importRow(r []string, scopedInstitution string) error {
 			return fmt.Errorf("barcode '%s' sudah terpakai", barcode)
 		}
 	}
-	user := models.User{Name: name, Email: email, RoleID: role.ID, InstitutionID: inst, Type: userType, Phone: phone, ContextType: contextType, ContextCode: contextCode, Status: models.UserStatus(isActive), Password: p2, LayerOne: string(l1s), LayerTwo: l2, Salt: salt, PinHash: pinHash, Barcode: barcode}
+	user := models.User{Name: name, Email: email, RoleID: role.ID, InstitutionID: inst, Type: userType, Phone: phone, ContextType: contextType, ContextCode: contextCode, Status: models.UserStatus(isActive), Password: p2, LayerOne: string(l1s), LayerTwo: l2, Salt: salt, PinHash: pinHash, Barcode: barcode, RFIDCardCode: rfidCardCode}
 	if err := s.DB.Create(&user).Error; err != nil {
 		return err
 	}

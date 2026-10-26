@@ -606,6 +606,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		"Barcode (Pelajar)",
 		"Kode Grup Pembelajaran",
 		"Nama Grup Pembelajaran",
+		"Kode RFID",
 	}
 
 	headerComments := map[string]string{
@@ -622,6 +623,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		"K1": "Opsional untuk Pelajar. Jika kosong, barcode akan dibuat otomatis. Barcode harus unik.",
 		"L1": "Opsional. Kode learning group. Spasi dan huruf besar/kecil diabaikan saat pencarian.",
 		"M1": "Opsional. Nama learning group; dipakai untuk pencarian atau membuat group baru jika kode dan nama belum ditemukan.",
+		"N1": "Opsional. Kode kartu RFID user (dipakai untuk absensi tap kartu). Harus unik.",
 	}
 
 	headerStyle, err := f.NewStyle(&excelize.Style{
@@ -692,6 +694,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		"Opsional Pelajar; unik, kosong = otomatis",
 		"Opsional; dipakai untuk mencari grup pembelajaran",
 		"Opsional; dipakai untuk mencari/membuat grup pembelajaran",
+		"Opsional; unik",
 	}
 	guideStyle, err := f.NewStyle(&excelize.Style{Font: &excelize.Font{Italic: true, Color: "666666"}, Fill: excelize.Fill{Type: "pattern", Color: []string{"EDEDED"}, Pattern: 1}, Alignment: &excelize.Alignment{WrapText: true, Vertical: "center"}})
 	if err != nil {
@@ -727,6 +730,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		"K": 26,
 		"L": 28,
 		"M": 28,
+		"N": 24,
 	}
 
 	for col, width := range colWidths {
@@ -865,7 +869,7 @@ func (s *UserService) generateTemplateExcel() ([]byte, error) {
 		return nil, err
 	}
 
-	if err := f.AutoFilter(sheet, "A1:K1", nil); err != nil {
+	if err := f.AutoFilter(sheet, "A1:N1", nil); err != nil {
 		return nil, err
 	}
 
@@ -924,6 +928,7 @@ func addGuideSheet(f *excelize.File) error {
 		{"Barcode (Pelajar)", "Opsional untuk Pelajar. Jika kosong, barcode dibuat otomatis dan harus unik.", "STD-00001"},
 		{"Learning Group Code", "Opsional. Kode grup pemelajaran; huruf besar/kecil dan spasi diabaikan.", "KELAS-01"},
 		{"Learning Group Name", "Opsional. Nama grup pemelajaran; dipakai untuk pencarian atau membuat group baru.", "Kelas 1A"},
+		{"Kode RFID", "Opsional. Kode kartu RFID user untuk absensi tap kartu. Harus unik.", "0012345678"},
 	}
 
 	for i, row := range rows {
