@@ -14,7 +14,7 @@ type CreateDTO struct {
 	PointValue  int    `json:"point_value" binding:"omitempty,min=0"`
 	DailyLimit  int    `json:"daily_limit" binding:"omitempty,min=0"`
 	PeriodLimit int    `json:"period_limit" binding:"omitempty,min=0"`
-	PeriodType  string `json:"period_type" binding:"omitempty,oneof=none weekly monthly lifetime"`
+	PeriodType  string `json:"period_type" binding:"omitempty,oneof=none daily weekly monthly lifetime"`
 	IsSendNotif bool   `json:"is_send_notif"`
 	Color       string `json:"color" binding:"omitempty,max=20"`
 }
@@ -26,7 +26,7 @@ type UpdateDTO struct {
 	PointValue  *int    `json:"point_value" binding:"omitempty,min=0"`
 	DailyLimit  *int    `json:"daily_limit" binding:"omitempty,min=0"`
 	PeriodLimit *int    `json:"period_limit" binding:"omitempty,min=0"`
-	PeriodType  *string `json:"period_type" binding:"omitempty,oneof=none weekly monthly lifetime"`
+	PeriodType  *string `json:"period_type" binding:"omitempty,oneof=none daily weekly monthly lifetime"`
 	IsSendNotif *bool   `json:"is_send_notif"`
 	Color       *string `json:"color" binding:"omitempty,max=20"`
 }
